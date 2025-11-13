@@ -29,6 +29,9 @@ func run(ctx context.Context, c *config.Config) error {
 	runCmd := func(arg ...string) (string, error) {
 		return execx.NewCmd(c.TempDir, arg...).Run(ctx)
 	}
+	runShellCmd := func(arg ...string) (string, error) {
+		return runCmd(append([]string{c.Shell, "-c"}, arg...)...)
+	}
 
 	slog.Debug("start run left", slog.Any("args", c.GetLeftArgs()))
 	leftOut, err := runCmd(c.GetLeftArgs()...)
@@ -45,23 +48,23 @@ func run(ctx context.Context, c *config.Config) error {
 	slog.Debug("end run right", slog.String("out", rightOut))
 
 	for i, p := range c.Preprocess {
-		logger := slog.With(slog.Int("count", i), slog.Any("preprocess", p))
+		logger := slog.With(slog.Int("count", i), slog.String("preprocess", p))
 		logger.Debug("start run preprocess for left")
-		leftOut, err = runCmd(c.Shell, "-c", p+" "+leftOut)
+		leftOut, err = runShellCmd(p + " " + leftOut)
 		if err != nil {
 			return fmt.Errorf("%w: run preprocess[%d] for left", err, i)
 		}
 		logger.Debug("end run preprocess for left", slog.String("out", leftOut))
 
 		logger.Debug("start run preprocess for right")
-		rightOut, err = runCmd(c.Shell, "-c", p+" "+rightOut)
+		rightOut, err = runShellCmd(p + " " + rightOut)
 		if err != nil {
 			return fmt.Errorf("%w: run preprocess[%d] for right", err, i)
 		}
 		logger.Debug("end run preprocess for right", slog.String("out", rightOut))
 	}
 
-	slog.Debug("start run diff", slog.Any("diff", c.Diff))
+	slog.Debug("start run diff", slog.String("diff", c.Diff))
 	cmd := exec.CommandContext(ctx, c.Shell, "-c", c.Diff+" "+leftOut+" "+rightOut)
 	cmd.Stdout = c.Writer
 	cmd.Stderr = os.Stderr
