@@ -37,7 +37,7 @@ cmdcomp -x 'diff -u' -- echo -- a -- b
 // sed 's|a|c|' leftfile > leftfile2
 // sed 's|a|c|' rightfile > rightfile2
 // diff leftfile2 rightfile2
-cmdcomp -p 'sed s|a|c|' -- echo -- a -- b
+cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b
 
 // helm template datadog/datadog --version 3.68.0 > leftfile1
 // helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug > rightfile1
