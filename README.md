@@ -58,3 +58,9 @@ cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-
   -s, --shell string             shell command to be executed (default "bash")
   -w, --work_dir string          working directory; keep temporary files
 ```
+
+## Install
+
+``` shell
+go install github.com/berquerant/cmdcomp/cmd/cmdcomp@latest
+```
