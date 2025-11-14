@@ -63,6 +63,7 @@ cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./char
   -i, --interceptor stringArray   process after left command and before right command; invoked like 'interceptor'
   -p, --preprocess stringArray    process before diff; invoked like 'preprocess FILE'; should output result to stdout
   -s, --shell string              shell command to be executed (default "bash")
+      --version                   display version
   -w, --work_dir string           working directory; keep temporary files
 ```
 

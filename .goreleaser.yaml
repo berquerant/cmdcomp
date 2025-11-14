@@ -1,0 +1,46 @@
+version: 2
+
+builds:
+  - main: ./cmd/cmdcomp
+    id: cmdcomp
+    binary: cmdcomp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 6
+      - 7
+    ignore:
+      - goos: linux
+        goarch: arm
+        goarm: 6
+    flags:
+      - -v
+      - -trimpath
+    ldflags:
+      - -s -w -X {{ .Env.VERSION_PACKAGE }}.Version={{ .Env.VERSION }} -X {{ .Env.VERSION_PACKAGE }}.Revision={{ .Env.REVISION }}
+
+archives:
+  - formats: binary
+    id: cmdcomp
+    files:
+      - NOTICE
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  prerelease: auto

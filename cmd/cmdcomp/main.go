@@ -11,6 +11,7 @@ import (
 	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/berquerant/cmdcomp/pkg/run"
 	"github.com/berquerant/cmdcomp/pkg/slicex"
+	"github.com/berquerant/cmdcomp/version"
 	"github.com/spf13/pflag"
 )
 
@@ -80,12 +81,13 @@ func main() {
 	}
 
 	var (
-		debug       = fs.Bool("debug", false, "enable debug logs")
-		workDir     = fs.StringP("work_dir", "w", "", "working directory; keep temporary files")
-		shell       = fs.StringP("shell", "s", "bash", "shell command to be executed")
-		interceptor []string
-		preprocess  []string
-		diff        string
+		displayVersion = fs.Bool("version", false, "display version")
+		debug          = fs.Bool("debug", false, "enable debug logs")
+		workDir        = fs.StringP("work_dir", "w", "", "working directory; keep temporary files")
+		shell          = fs.StringP("shell", "s", "bash", "shell command to be executed")
+		interceptor    []string
+		preprocess     []string
+		diff           string
 	)
 	// workaround: https://github.com/spf13/pflag/issues/370
 	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
@@ -104,6 +106,10 @@ func main() {
 		return
 	}
 	fail(err)
+	if *displayVersion {
+		version.Write(os.Stdout)
+		return
+	}
 
 	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell)
 	c.Debug = *debug

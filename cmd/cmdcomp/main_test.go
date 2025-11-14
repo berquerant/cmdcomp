@@ -19,6 +19,11 @@ func TestE2E(t *testing.T) {
 	}
 
 	const bin = "./bin/cmdcomp"
+
+	t.Run("version", func(t *testing.T) {
+		assert.Nil(t, run(t, os.Stdout, bin, "--version"))
+	})
+
 	for _, tc := range []struct {
 		title      string
 		arg        string
