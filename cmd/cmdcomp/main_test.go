@@ -18,7 +18,7 @@ func TestE2E(t *testing.T) {
 		return
 	}
 
-	const bin = "./dist/cmdcomp"
+	const bin = "./bin/cmdcomp"
 	for _, tc := range []struct {
 		title      string
 		arg        string

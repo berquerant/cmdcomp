@@ -1,7 +1,7 @@
 GOBUILD = go build -trimpath -v
 GOTEST = go test -cover -race
 CMD = ./cmd/cmdcomp
-BIN = dist/cmdcomp
+BIN = bin/cmdcomp
 
 .PHONY: $(BIN)
 $(BIN):
