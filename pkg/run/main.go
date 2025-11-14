@@ -40,6 +40,19 @@ func run(ctx context.Context, c *config.Config) error {
 	}
 	slog.Debug("end run left", slog.String("out", leftOut))
 
+	for i, p := range c.Interceptor {
+		logger := slog.With(slog.Int("count", i), slog.String("interceptor", p))
+		logger.Debug("start run interceptor")
+		cmd := exec.CommandContext(ctx, c.Shell, "-c", p)
+		cmd.Stdout = os.Stderr // interceptor stdout cannot be mixed with diff stdout
+		cmd.Stderr = os.Stderr
+		cmd.Env = os.Environ()
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("%w: run interceptor[%d]", err, i)
+		}
+		slog.Debug("end run interceptor")
+	}
+
 	slog.Debug("start run right", slog.Any("args", c.GetRightArgs()))
 	rightOut, err := runCmd(c.GetRightArgs()...)
 	if err != nil {

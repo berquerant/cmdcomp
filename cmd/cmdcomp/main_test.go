@@ -3,9 +3,11 @@ package main_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,6 +88,27 @@ func TestE2E(t *testing.T) {
 			assert.Equal(t, tc.want, got.String())
 		})
 	}
+
+	t.Run("interceptor", func(t *testing.T) {
+		out := filepath.Join(t.TempDir(), "out")
+		arg := fmt.Sprintf(
+			`-i 'touch %s' -- echo -- a -- b`,
+			out,
+		)
+		var got bytes.Buffer
+		err := run(t, &got, "bash", "-c", bin+" "+arg)
+		var exitErr *exec.ExitError
+		if !assert.True(t, errors.As(err, &exitErr)) {
+			return
+		}
+		assert.Equal(t, 1, exitErr.ExitCode())
+		assert.FileExists(t, out)
+		assert.Equal(t, `1c1
+< a
+---
+> b
+`, got.String())
+	})
 }
 
 func run(t *testing.T, stdout io.Writer, name string, arg ...string) error {

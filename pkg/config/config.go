@@ -16,23 +16,25 @@ var (
 
 func NewConfig(
 	w io.Writer,
-	preprocess []string,
+	interceptor, preprocess []string,
 	diff, shell string,
 ) *Config {
 	return &Config{
-		Preprocess: preprocess,
-		Diff:       diff,
-		Shell:      shell,
-		Writer:     w,
+		Interceptor: interceptor,
+		Preprocess:  preprocess,
+		Diff:        diff,
+		Shell:       shell,
+		Writer:      w,
 	}
 }
 
 type Config struct {
-	Debug      bool
-	Preprocess []string
-	Diff       string
-	WorkDir    string
-	Shell      string
+	Debug       bool
+	Interceptor []string
+	Preprocess  []string
+	Diff        string
+	WorkDir     string
+	Shell       string
 
 	CommonArgs []string
 	LeftArgs   []string

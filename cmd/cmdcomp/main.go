@@ -62,6 +62,12 @@ cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-
 // diff -u --color leftfile3 rightfile3
 cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -p 'gron' -x 'diff -u --color' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
 
+// helm template ./charts/datadog > leftfile1
+// git checkout datadog-3.69.3
+// helm template ./charts/datadog > rightfile1
+// objdiff -c leftfile1 rightfile1
+cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
+
 # Flags
 
 `
@@ -74,13 +80,17 @@ func main() {
 	}
 
 	var (
-		debug      = fs.Bool("debug", false, "enable debug logs")
-		workDir    = fs.StringP("work_dir", "w", "", "working directory; keep temporary files")
-		shell      = fs.StringP("shell", "s", "bash", "shell command to be executed")
-		preprocess []string
-		diff       string
+		debug       = fs.Bool("debug", false, "enable debug logs")
+		workDir     = fs.StringP("work_dir", "w", "", "working directory; keep temporary files")
+		shell       = fs.StringP("shell", "s", "bash", "shell command to be executed")
+		interceptor []string
+		preprocess  []string
+		diff        string
 	)
 	// workaround: https://github.com/spf13/pflag/issues/370
+	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
+		"process after left command and before right command; invoked like 'interceptor'",
+	)
 	fs.StringArrayVarP(&preprocess, "preprocess", "p", nil,
 		"process before diff; invoked like 'preprocess FILE'; should output result to stdout",
 	)
@@ -95,7 +105,7 @@ func main() {
 	}
 	fail(err)
 
-	c := config.NewConfig(os.Stdout, preprocess, diff, *shell)
+	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell)
 	c.Debug = *debug
 	c.WorkDir = *workDir
 	c.SetupLogger(os.Stderr)
