@@ -17,13 +17,14 @@ var (
 func NewConfig(
 	w io.Writer,
 	interceptor, preprocess []string,
-	diff, shell string,
+	diff, shell, delimiter string,
 ) *Config {
 	return &Config{
 		Interceptor: interceptor,
 		Preprocess:  preprocess,
 		Diff:        diff,
 		Shell:       shell,
+		Delimiter:   delimiter,
 		Writer:      w,
 	}
 }
@@ -35,6 +36,7 @@ type Config struct {
 	Diff        string
 	WorkDir     string
 	Shell       string
+	Delimiter   string
 
 	CommonArgs []string
 	LeftArgs   []string
@@ -86,9 +88,9 @@ func (c *Config) setArgs(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("%w: no args", ErrConfig)
 	}
-	before, after := slicex.Split(args, "--")
+	before, after := slicex.Split(args, c.Delimiter)
 	c.CommonArgs = before
-	c.LeftArgs, c.RightArgs = slicex.Split(after, "--")
+	c.LeftArgs, c.RightArgs = slicex.Split(after, c.Delimiter)
 
 	if len(c.GetLeftArgs()) == 0 {
 		return fmt.Errorf("%w: no left args", ErrConfig)

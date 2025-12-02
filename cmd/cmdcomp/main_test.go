@@ -24,6 +24,51 @@ func TestE2E(t *testing.T) {
 		assert.Nil(t, run(t, os.Stdout, bin, "--version"))
 	})
 
+	t.Run("delimiter", func(t *testing.T) {
+		for _, tc := range []struct {
+			title      string
+			arg        string
+			want       string
+			wantStatus int
+		}{
+			{
+				title: "changed",
+				arg:   bin + ` -d '---' -- echo --- echo -- a --- echo -- b`,
+				want: `1c1
+< echo -- a
+---
+> echo -- b
+`,
+				wantStatus: 1,
+			},
+			{
+				title: "cmdcomp",
+				arg:   fmt.Sprintf(`%[1]s -d '---' -- %[1]s --success -- echo -- a -- --- b --- c`, bin),
+				want: `4c4
+< > b
+---
+> > c
+`,
+				wantStatus: 1,
+			},
+		} {
+			t.Run(tc.title, func(t *testing.T) {
+				var got bytes.Buffer
+				err := run(t, &got, "bash", "-c", tc.arg)
+				if tc.wantStatus == 0 {
+					assert.Nil(t, err)
+				} else {
+					var exitErr *exec.ExitError
+					if !assert.True(t, errors.As(err, &exitErr)) {
+						return
+					}
+					assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
+				}
+				assert.Equal(t, tc.want, got.String())
+			})
+		}
+	})
+
 	for _, tc := range []struct {
 		title      string
 		arg        string
@@ -31,9 +76,29 @@ func TestE2E(t *testing.T) {
 		wantStatus int
 	}{
 		{
+			title: "pass args to echo",
+			arg:   "-- echo -- --debug a -- a",
+			want: `1c1
+< --debug a
+---
+> a
+`,
+			wantStatus: 1,
+		},
+		{
 			title:      "no diff",
 			arg:        "-- echo -- a -- a",
 			want:       ``,
+			wantStatus: 0,
+		},
+		{
+			title: "success",
+			arg:   "--success -- echo -- a -- b",
+			want: `1c1
+< a
+---
+> b
+`,
 			wantStatus: 0,
 		},
 		{

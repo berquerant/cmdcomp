@@ -56,13 +56,27 @@ cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-
 // objdiff -c leftfile1 rightfile1
 cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
 
+// echo echo -- a > leftfile1
+// echo echo -- b > rightfile1
+// diff leftfile1 rightfile1
+cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
+
+// cmdcomp --success -- echo -- a -- b > leftfile1
+// cmdcomp --success -- echo -- a -- c > rightfile1
+// diff leftfile1 rightfile1
+cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
+
 # Flags
 
       --debug                     enable debug logs
+  -d, --delimiter string          arguments delimiter;
+                                  change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
   -x, --diff string               diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
   -i, --interceptor stringArray   process after left command and before right command; invoked like 'interceptor'
   -p, --preprocess stringArray    process before diff; invoked like 'preprocess FILE'; should output result to stdout
   -s, --shell string              shell command to be executed (default "bash")
+      --success                   exit successfully even if there are diffs;
+                                  in other words, succeed even if the diff command returns exit status 1
       --version                   display version
   -w, --work_dir string           working directory; keep temporary files
 ```

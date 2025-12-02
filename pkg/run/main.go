@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -22,6 +23,9 @@ func Main(c *config.Config) error {
 	defer stop()
 	return run(ctx, c)
 }
+
+// An error from diff command.
+var ErrDiff = errors.New("Diff")
 
 func run(ctx context.Context, c *config.Config) error {
 	defer c.Close()
@@ -83,6 +87,9 @@ func run(ctx context.Context, c *config.Config) error {
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
 	err = cmd.Run()
+	if err != nil {
+		err = errors.Join(ErrDiff, err)
+	}
 	slog.Debug("end run diff", slog.Any("err", err))
 	return err
 }

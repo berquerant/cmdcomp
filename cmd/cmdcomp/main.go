@@ -69,6 +69,16 @@ cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-
 // objdiff -c leftfile1 rightfile1
 cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
 
+// echo echo -- a > leftfile1
+// echo echo -- b > rightfile1
+// diff leftfile1 rightfile1
+cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
+
+// cmdcomp --success -- echo -- a -- b > leftfile1
+// cmdcomp --success -- echo -- a -- c > rightfile1
+// diff leftfile1 rightfile1
+cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
+
 # Flags
 
 `
@@ -85,9 +95,13 @@ func main() {
 		debug          = fs.Bool("debug", false, "enable debug logs")
 		workDir        = fs.StringP("work_dir", "w", "", "working directory; keep temporary files")
 		shell          = fs.StringP("shell", "s", "bash", "shell command to be executed")
-		interceptor    []string
-		preprocess     []string
-		diff           string
+		delimiter      = fs.StringP("delimiter", "d", "--", `arguments delimiter;
+change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
+		success = fs.Bool("success", false, `exit successfully even if there are diffs;
+in other words, succeed even if the diff command returns exit status 1`)
+		interceptor []string
+		preprocess  []string
+		diff        string
 	)
 	// workaround: https://github.com/spf13/pflag/issues/370
 	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
@@ -111,7 +125,7 @@ func main() {
 		return
 	}
 
-	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell)
+	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell, *delimiter)
 	c.Debug = *debug
 	c.WorkDir = *workDir
 	c.SetupLogger(os.Stderr)
@@ -124,6 +138,9 @@ func main() {
 	if err := run.Main(c); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
+			if *success && errors.Is(err, run.ErrDiff) && exitErr.ExitCode() == 1 {
+				return
+			}
 			os.Exit(exitErr.ExitCode())
 		}
 		fail(err)
