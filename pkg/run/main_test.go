@@ -152,21 +152,21 @@ func TestMain(t *testing.T) {
 			errMsg: "exit status 2: run right",
 		},
 		{
-			title: "preprocess1 right fail",
+			title: "preprocess right fail",
 			c: config.NewConfig(nil, nil, []string{
 				`grep "a"`,
 			}, "diff", "bash", "--"),
 			args:   []string{"echo", "--", "a", "--", "b"},
-			errMsg: "exit status 1: run preprocess[0] for right",
+			errMsg: "run right preprocess",
 		},
 		{
-			title: "preprocess2 left fail",
+			title: "preprocess left fail",
 			c: config.NewConfig(nil, nil, []string{
 				`grep "a"`,
 				`grep "b"`,
 			}, "diff", "bash", "--"),
 			args:   []string{"echo", "--", "a", "--", "a"},
-			errMsg: "exit status 1: run preprocess[1] for left",
+			errMsg: "run left preprocess",
 		},
 		{
 			title: "interceptor1 fail",

@@ -12,6 +12,7 @@ import (
 
 	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/berquerant/cmdcomp/pkg/execx"
+	"golang.org/x/sync/errgroup"
 )
 
 func Main(c *config.Config) error {
@@ -32,9 +33,6 @@ func run(ctx context.Context, c *config.Config) error {
 
 	runCmd := func(arg ...string) (string, error) {
 		return execx.NewCmd(c.TempDir, arg...).Run(ctx)
-	}
-	runShellCmd := func(arg ...string) (string, error) {
-		return runCmd(append([]string{c.Shell, "-c"}, arg...)...)
 	}
 
 	slog.Debug("start run left", slog.Any("args", c.GetLeftArgs()))
@@ -64,21 +62,55 @@ func run(ctx context.Context, c *config.Config) error {
 	}
 	slog.Debug("end run right", slog.String("out", rightOut))
 
-	for i, p := range c.Preprocess {
-		logger := slog.With(slog.Int("count", i), slog.String("preprocess", p))
-		logger.Debug("start run preprocess for left")
-		leftOut, err = runShellCmd(p + " " + leftOut)
-		if err != nil {
-			return fmt.Errorf("%w: run preprocess[%d] for left", err, i)
+	if len(c.Preprocess) > 0 {
+		var (
+			newShellCmd = func(arg ...string) *execx.Cmd {
+				return execx.NewCmd(c.TempDir, append([]string{c.Shell, "-c"}, arg...)...)
+			}
+			runPreprocess = func(target, inFile string, cmd ...*execx.Cmd) (string, error) {
+				slog.Debug(fmt.Sprintf("start %s preprocess", target), slog.String("in", inFile))
+				stdin, err := os.Open(inFile)
+				if err != nil {
+					return "", fmt.Errorf("%w: run %s preprocess", err, target)
+				}
+				defer stdin.Close()
+				p := execx.NewPipedCmd(ctx, c.TempDir, stdin, cmd...)
+				if err := p.Run(ctx); err != nil {
+					return "", fmt.Errorf("%w: run %s preprocess", err, target)
+				}
+				slog.Debug(fmt.Sprintf("end %s preprocess", target), slog.String("out", p.Path()))
+				return p.Path(), nil
+			}
+			leftPreprocess  = make([]*execx.Cmd, len(c.Preprocess))
+			rightPreprocess = make([]*execx.Cmd, len(c.Preprocess))
+		)
+		for i, p := range c.Preprocess {
+			logger := slog.With(slog.Int("count", i), slog.String("preprocess", p))
+			logger.Debug("preprocess")
+			leftPreprocess[i] = newShellCmd(p)
+			rightPreprocess[i] = newShellCmd(p)
 		}
-		logger.Debug("end run preprocess for left", slog.String("out", leftOut))
 
-		logger.Debug("start run preprocess for right")
-		rightOut, err = runShellCmd(p + " " + rightOut)
-		if err != nil {
-			return fmt.Errorf("%w: run preprocess[%d] for right", err, i)
+		eg, _ := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			out, err := runPreprocess("left", leftOut, leftPreprocess...)
+			if err != nil {
+				return err
+			}
+			leftOut = out
+			return nil
+		})
+		eg.Go(func() error {
+			out, err := runPreprocess("right", rightOut, rightPreprocess...)
+			if err != nil {
+				return err
+			}
+			rightOut = out
+			return nil
+		})
+		if err := eg.Wait(); err != nil {
+			return err
 		}
-		logger.Debug("end run preprocess for right", slog.String("out", rightOut))
 	}
 
 	slog.Debug("start run diff", slog.String("diff", c.Diff))
