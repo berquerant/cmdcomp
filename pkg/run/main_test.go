@@ -142,13 +142,13 @@ func TestMain(t *testing.T) {
 		{
 			title:  "left fail",
 			c:      config.NewConfig(nil, nil, nil, "diff", "bash", "--"),
-			args:   []string{"--", "bash", "-c", "exit 2", "--", "echo ", "b"},
+			args:   []string{"bash", "-c", "--", "exit 2", "--", "echo b"},
 			errMsg: "exit status 2: run left",
 		},
 		{
 			title:  "right fail",
 			c:      config.NewConfig(nil, nil, nil, "diff", "bash", "--"),
-			args:   []string{"--", "echo", "a", "--", "bash", "-c", "exit 2"},
+			args:   []string{"bash", "-c", "--", "echo", "a", "--", "exit 2"},
 			errMsg: "exit status 2: run right",
 		},
 		{
@@ -157,7 +157,7 @@ func TestMain(t *testing.T) {
 				`grep "a"`,
 			}, "diff", "bash", "--"),
 			args:   []string{"echo", "--", "a", "--", "b"},
-			errMsg: "run right preprocess",
+			errMsg: "preprocess",
 		},
 		{
 			title: "preprocess left fail",
@@ -166,7 +166,7 @@ func TestMain(t *testing.T) {
 				`grep "b"`,
 			}, "diff", "bash", "--"),
 			args:   []string{"echo", "--", "a", "--", "a"},
-			errMsg: "run left preprocess",
+			errMsg: "preprocess",
 		},
 		{
 			title: "interceptor1 fail",

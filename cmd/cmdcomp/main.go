@@ -33,50 +33,40 @@ cmdcomp -- echo -- a -- b
 // diff -u leftfile rightfile
 cmdcomp -x 'diff -u' -- echo -- a -- b
 
-// echo a > leftfile
-// echo b > rightfile
-// sed 's|a|c|' leftfile > leftfile2
-// sed 's|a|c|' rightfile > rightfile2
-// diff leftfile2 rightfile2
+// echo a | sed 's|a|c|' > leftfile
+// echo b | sed 's|a|c|' > rightfile
+// diff leftfile rightfile
 cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b
 
-// helm template datadog/datadog --version 3.68.0 > leftfile1
-// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug > rightfile1
-// yq 'select(.kind=="Secret")' leftfile1 > leftfile2
-// yq 'select(.kind=="Secret")' rightfile1 > rightfile2
-// objdiff -c leftfile2 rightfile2
+// helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Secret")' > leftfile
+// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Secret")' > rightfile
+// objdiff -c leftfile rightfile
 cmdcomp -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
 
-// helm template datadog/datadog --version 3.68.0 > leftfile1
-// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug > rightfile1
-// yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json leftfile1 > leftfile2
-// yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json rightfile1 > rightfile2
-// npx jsondiffpatch --format=jsonpatch leftfile2 rightfile2
+// helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > leftfile
+// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > rightfile
+// npx jsondiffpatch --format=jsonpatch leftfile rightfile
 cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -x 'npx jsondiffpatch --format=jsonpatch' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
 
-// helm template datadog/datadog --version 3.68.0 > leftfile1
-// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug > rightfile1
-// yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json leftfile1 > leftfile2
-// yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json rightfile1 > rightfile2
-// gron leftfile2 > leftfile3
-// gron rightfile2 > rightfile3
-// diff -u --color leftfile3 rightfile3
+// helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > leftfile
+// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > rightfile
+// diff -u --color leftfile rightfile
 cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -p 'gron' -x 'diff -u --color' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
 
-// helm template ./charts/datadog > leftfile1
+// helm template ./charts/datadog > leftfile
 // git checkout datadog-3.69.3
-// helm template ./charts/datadog > rightfile1
-// objdiff -c leftfile1 rightfile1
+// helm template ./charts/datadog > rightfile
+// objdiff -c leftfile rightfile
 cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
 
-// echo echo -- a > leftfile1
-// echo echo -- b > rightfile1
-// diff leftfile1 rightfile1
+// echo echo -- a > leftfile
+// echo echo -- b > rightfile
+// diff leftfile rightfile
 cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
 
-// cmdcomp --success -- echo -- a -- b > leftfile1
-// cmdcomp --success -- echo -- a -- c > rightfile1
-// diff leftfile1 rightfile1
+// cmdcomp --success -- echo -- a -- b > leftfile
+// cmdcomp --success -- echo -- a -- c > rightfile
+// diff leftfile rightfile
 cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
 
 # Flags
@@ -108,7 +98,7 @@ in other words, succeed even if the diff command returns exit status 1`)
 		"process after left command and before right command; invoked like 'interceptor'",
 	)
 	fs.StringArrayVarP(&preprocess, "preprocess", "p", nil,
-		"process before diff; invoked like 'preprocess FILE'; should output result to stdout",
+		"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout",
 	)
 	fs.StringVarP(&diff, "diff", "x", "diff",
 		"diff command; invoked like 'diff LEFT_FILE RIGHT_FILE'",

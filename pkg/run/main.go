@@ -31,36 +31,65 @@ var ErrDiff = errors.New("Diff")
 func run(ctx context.Context, c *config.Config) error {
 	defer c.Close()
 
-	runCmd := func(arg ...string) (string, error) {
-		return execx.NewCmd(c.TempDir, arg...).Run(ctx)
-	}
-
-	slog.Debug("start run left", slog.Any("args", c.GetLeftArgs()))
-	leftOut, err := runCmd(c.GetLeftArgs()...)
-	if err != nil {
-		return fmt.Errorf("%w: run left", err)
-	}
-	slog.Debug("end run left", slog.String("out", leftOut))
-
-	for i, p := range c.Interceptor {
-		logger := slog.With(slog.Int("count", i), slog.String("interceptor", p))
-		logger.Debug("start run interceptor")
-		cmd := exec.CommandContext(ctx, c.Shell, "-c", p)
-		cmd.Stdout = os.Stderr // interceptor stdout cannot be mixed with diff stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = os.Environ()
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("%w: run interceptor[%d]", err, i)
+	var (
+		runCmd = func(arg ...string) (string, error) {
+			return execx.NewCmd(c.TempDir, arg...).Run(ctx)
 		}
-		slog.Debug("end run interceptor")
-	}
+		runGenCmd = func(target string, arg ...string) (string, error) {
+			slog.Debug(fmt.Sprintf("start run %s", target), slog.Any("args", arg))
+			out, err := runCmd(arg...)
+			if err != nil {
+				return "", fmt.Errorf("%w: run %s", err, target)
+			}
+			slog.Debug(fmt.Sprintf("end run %s", target), slog.String("out", out))
+			return out, nil
+		}
 
-	slog.Debug("start run right", slog.Any("args", c.GetRightArgs()))
-	rightOut, err := runCmd(c.GetRightArgs()...)
-	if err != nil {
-		return fmt.Errorf("%w: run right", err)
+		leftOut, rightOut string
+	)
+
+	if len(c.Interceptor) == 0 {
+		eg, _ := errgroup.WithContext(ctx)
+		eg.Go(func() error {
+			out, err := runGenCmd("left", c.GetLeftArgs()...)
+			if err != nil {
+				return err
+			}
+			leftOut = out
+			return nil
+		})
+		eg.Go(func() error {
+			out, err := runGenCmd("right", c.GetRightArgs()...)
+			if err != nil {
+				return err
+			}
+			rightOut = out
+			return nil
+		})
+		if err := eg.Wait(); err != nil {
+			return err
+		}
+	} else {
+		var err error
+		if leftOut, err = runGenCmd("left", c.GetLeftArgs()...); err != nil {
+			return err
+		}
+		for i, p := range c.Interceptor {
+			logger := slog.With(slog.Int("count", i), slog.String("interceptor", p))
+			logger.Debug("start run interceptor")
+			cmd := exec.CommandContext(ctx, c.Shell, "-c", p)
+			cmd.Stdout = os.Stderr // interceptor stdout cannot be mixed with diff stdout
+			cmd.Stderr = os.Stderr
+			cmd.Env = os.Environ()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("%w: run interceptor[%d]", err, i)
+			}
+			slog.Debug("end run interceptor")
+		}
+		if rightOut, err = runGenCmd("right", c.GetRightArgs()...); err != nil {
+			return err
+		}
 	}
-	slog.Debug("end run right", slog.String("out", rightOut))
 
 	if len(c.Preprocess) > 0 {
 		var (
@@ -118,7 +147,7 @@ func run(ctx context.Context, c *config.Config) error {
 	cmd.Stdout = c.Writer
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		err = errors.Join(ErrDiff, err)
 	}
