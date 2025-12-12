@@ -83,6 +83,7 @@ func main() {
 	var (
 		displayVersion = fs.Bool("version", false, "display version")
 		debug          = fs.Bool("debug", false, "enable debug logs")
+		showCmdLog     = fs.Bool("showCmdLog", false, "show command logs")
 		workDir        = fs.StringP("work_dir", "w", "", "working directory; keep temporary files")
 		shell          = fs.StringP("shell", "s", "bash", "shell command to be executed")
 		delimiter      = fs.StringP("delimiter", "d", "--", `arguments delimiter;
@@ -116,6 +117,7 @@ in other words, succeed even if the diff command returns exit status 1`)
 	}
 
 	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell, *delimiter)
+	c.ShowCmdLog = *showCmdLog
 	c.Debug = *debug
 	c.WorkDir = *workDir
 	c.SetupLogger(os.Stderr)

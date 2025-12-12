@@ -37,6 +37,10 @@ func (c *Cmd) intoExecCmd(ctx context.Context) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
+func (c *Cmd) IntoExecCmd(ctx context.Context) (*exec.Cmd, error) {
+	return c.intoExecCmd(ctx)
+}
+
 // Run executes the command and returns the filepath where the results were written.
 func (c *Cmd) Run(ctx context.Context) (string, error) {
 	cmd, err := c.intoExecCmd(ctx)

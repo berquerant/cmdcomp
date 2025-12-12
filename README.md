@@ -65,6 +65,7 @@ cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
   -i, --interceptor stringArray   process after left command and before right command; invoked like 'interceptor'
   -p, --preprocess stringArray    process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
   -s, --shell string              shell command to be executed (default "bash")
+      --showCmdLog                show command logs
       --success                   exit successfully even if there are diffs;
                                   in other words, succeed even if the diff command returns exit status 1
       --version                   display version

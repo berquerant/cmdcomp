@@ -30,6 +30,7 @@ func NewConfig(
 }
 
 type Config struct {
+	ShowCmdLog  bool
 	Debug       bool
 	Interceptor []string
 	Preprocess  []string
