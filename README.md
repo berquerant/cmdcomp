@@ -80,7 +80,7 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
       --success                   exit successfully even if there are diffs;
                                   in other words, succeed even if the diff command returns exit status 1
       --version                   display version
-  -w, --work_dir string           working directory; keep temporary files
+  -w, --workDir string            working directory; keep temporary files
 ```
 
 ## Install

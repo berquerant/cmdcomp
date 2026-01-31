@@ -94,7 +94,7 @@ func main() {
 		displayVersion = fs.Bool("version", false, "display version")
 		debug          = fs.Bool("debug", false, "enable debug logs")
 		showCmdLog     = fs.Bool("showCmdLog", false, "show command logs")
-		workDir        = fs.StringP("work_dir", "w", "", "working directory; keep temporary files")
+		workDir        = fs.StringP("workDir", "w", "", "working directory; keep temporary files")
 		shell          = fs.StringP("shell", "s", "bash", "shell command to be executed")
 		delimiter      = fs.StringP("delimiter", "d", "--", `arguments delimiter;
 change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
