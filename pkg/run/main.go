@@ -295,6 +295,8 @@ func (r *runner) newRunDiffArgument(left, right string) []string {
 		right,
 	}
 	if r.UseLabel {
+		// use '___' to join the arguments.
+		// since they are passed as bash -c, using ' ' delimiters makes correct escaping complicated
 		xs = append(xs, "--label", strings.Join(r.GetLeftArgs(), "___"))
 		xs = append(xs, "--label", strings.Join(r.GetRightArgs(), "___"))
 	}
