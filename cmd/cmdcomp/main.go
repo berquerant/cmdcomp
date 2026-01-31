@@ -69,6 +69,11 @@ cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
 // diff leftfile rightfile
 cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
 
+// helm show values datadog/datadog --version 3.69.3 | yq -o json | gron > leftfile
+// helm show values datadog/datadog --version 3.164.1 | yq -o json | gron > rightfile
+// diff -u --color leftfile rightfile
+cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datadog/datadog --version -- 3.69.3 -- 3.164.1
+
 # Flags
 
 `
