@@ -33,6 +33,11 @@ cmdcomp -- echo -- a -- b
 // diff -u leftfile rightfile
 cmdcomp -x 'diff -u' -- echo -- a -- b
 
+// echo a > leftfile
+// echo b > rightfile
+// diff -u leftfile rightfile --label echo___a --label echo___b
+cmdcomp -x 'diff -u' -l -- echo -- a -- b
+
 // echo a | sed 's|a|c|' > leftfile
 // echo b | sed 's|a|c|' > rightfile
 // diff leftfile rightfile
@@ -95,6 +100,7 @@ func main() {
 change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
 		success = fs.Bool("success", false, `exit successfully even if there are diffs;
 in other words, succeed even if the diff command returns exit status 1`)
+		useLabel    = fs.BoolP("label", "l", false, "use '--label' option of diff command")
 		interceptor []string
 		preprocess  []string
 		diff        string
@@ -121,7 +127,7 @@ in other words, succeed even if the diff command returns exit status 1`)
 		return
 	}
 
-	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell, *delimiter)
+	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell, *delimiter, *useLabel)
 	c.ShowCmdLog = *showCmdLog
 	c.Debug = *debug
 	c.WorkDir = *workDir

@@ -18,6 +18,7 @@ func NewConfig(
 	w io.Writer,
 	interceptor, preprocess []string,
 	diff, shell, delimiter string,
+	useLabel bool,
 ) *Config {
 	return &Config{
 		Interceptor: interceptor,
@@ -26,6 +27,7 @@ func NewConfig(
 		Shell:       shell,
 		Delimiter:   delimiter,
 		Writer:      w,
+		UseLabel:    useLabel,
 	}
 }
 
@@ -38,6 +40,7 @@ type Config struct {
 	WorkDir     string
 	Shell       string
 	Delimiter   string
+	UseLabel    bool
 
 	CommonArgs []string
 	LeftArgs   []string

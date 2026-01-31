@@ -20,6 +20,11 @@ cmdcomp -- echo -- a -- b
 // diff -u leftfile rightfile
 cmdcomp -x 'diff -u' -- echo -- a -- b
 
+// echo a > leftfile
+// echo b > rightfile
+// diff -u leftfile rightfile --label echo___a --label echo___b
+cmdcomp -x 'diff -u' -l -- echo -- a -- b
+
 // echo a | sed 's|a|c|' > leftfile
 // echo b | sed 's|a|c|' > rightfile
 // diff leftfile rightfile
@@ -68,6 +73,7 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
                                   change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
   -x, --diff string               diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
   -i, --interceptor stringArray   process after left command and before right command; invoked like 'interceptor'
+  -l, --label                     use '--label' option of diff command
   -p, --preprocess stringArray    process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
   -s, --shell string              shell command to be executed (default "bash")
       --showCmdLog                show command logs

@@ -288,9 +288,22 @@ func (r *runner) runPreprocesses(ctx context.Context, left, right string) (*cmdR
 	}, nil
 }
 
+func (r *runner) newRunDiffArgument(left, right string) []string {
+	xs := []string{
+		r.Diff,
+		left,
+		right,
+	}
+	if r.UseLabel {
+		xs = append(xs, "--label", strings.Join(r.GetLeftArgs(), "___"))
+		xs = append(xs, "--label", strings.Join(r.GetRightArgs(), "___"))
+	}
+	return xs
+}
+
 func (r *runner) runDiff(ctx context.Context, left, right string) error {
-	slog.Debug("start run diff", slog.String("diff", r.Diff))
-	cmd := exec.CommandContext(ctx, r.Shell, "-c", r.Diff+" "+left+" "+right)
+	cmd := exec.CommandContext(ctx, r.Shell, "-c", strings.Join(r.newRunDiffArgument(left, right), " "))
+	slog.Debug("start run diff", slog.Any("cmd", cmd.Args))
 	cmd.Stdout = r.Writer
 	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
