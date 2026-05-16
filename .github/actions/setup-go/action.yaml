@@ -1,5 +1,8 @@
 name: Setup Go
-
+inputs:
+  cache:
+    required: false
+    default: 'true'
 runs:
   using: "composite"
   steps:
@@ -9,6 +12,7 @@ runs:
       with:
         go-version-file: "go.mod"
         cache-dependency-path: go.sum
+        cache: ${{ inputs.cache }}
     - name: Download go modules
       run: go mod download
       shell: bash
