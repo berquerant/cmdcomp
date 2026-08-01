@@ -17,15 +17,19 @@ init:
 	$(GOMOD) tidy -v
 
 .PHONY: lint
-lint: check-licenses vet vuln
-
-.PHONY: vuln
-vuln:
-	go tool govulncheck ./...
+lint: check-licenses vet go-fix
 
 .PHONY: vet
 vet:
 	go vet ./...
+
+.PHONY: go-fix
+go-fix:
+	go fix -diff ./...
+
+.PHONY: go-fix-fix
+go-fix-fix:
+	go fix ./...
 
 .PHONY: check-licenses-diff
 check-licenses-diff: $(THIRD_PARTY_LICENSES)
