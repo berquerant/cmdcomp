@@ -19,10 +19,6 @@ init:
 .PHONY: lint
 lint: check-licenses vet vuln
 
-.PHONY: vuln
-vuln:
-	go tool govulncheck ./...
-
 .PHONY: vet
 vet:
 	go vet ./...

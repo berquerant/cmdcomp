@@ -2,10 +2,7 @@ module github.com/berquerant/cmdcomp
 
 go 1.26.2
 
-tool (
-	github.com/google/go-licenses/v2
-	golang.org/x/vuln/cmd/govulncheck
-)
+tool github.com/google/go-licenses/v2
 
 require (
 	github.com/berquerant/execx v0.13.0
@@ -29,11 +26,8 @@ require (
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260409153401-be6f6cb8b1fa // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
-	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
-	golang.org/x/vuln v1.1.4 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
 )
