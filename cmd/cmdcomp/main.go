@@ -114,10 +114,10 @@ in other words, succeed even if the diff command returns exit status 1`)
 		"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout",
 	)
 	fs.StringArrayVar(&leftPreprocess, "leftPreprocess", nil,
-		"process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout",
+		"additional left process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout",
 	)
 	fs.StringArrayVar(&rightPreprocess, "rightPreprocess", nil,
-		"process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout",
+		"additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout",
 	)
 	fs.StringArrayVar(&env, "env", nil,
 		`process environment variables;
