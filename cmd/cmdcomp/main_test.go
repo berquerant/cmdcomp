@@ -69,6 +69,13 @@ func TestE2E(t *testing.T) {
 		}
 	})
 
+	envEcho := filepath.Join(t.TempDir(), "envecho.sh")
+	if !assert.Nil(t, os.WriteFile(envEcho, []byte(`#!/bin/bash
+echo "${X}=${Y}"
+`), 0755)) {
+		return
+	}
+
 	for _, tc := range []struct {
 		title      string
 		arg        string
@@ -149,6 +156,16 @@ func TestE2E(t *testing.T) {
 < ax
 ---
 > bx
+`,
+			wantStatus: 1,
+		},
+		{
+			title: "env",
+			arg:   `--env "X=x" --leftEnv "Y=1" --rightEnv "Y=2" -- ` + envEcho,
+			want: `1c1
+< x=1
+---
+> x=2
 `,
 			wantStatus: 1,
 		},

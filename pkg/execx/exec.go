@@ -16,12 +16,14 @@ import (
 type Cmd struct {
 	tmpDir string
 	args   []string
+	Env    []string
 }
 
 func NewCmd(tmpDir string, arg ...string) *Cmd {
 	return &Cmd{
 		tmpDir: tmpDir,
 		args:   arg,
+		Env:    os.Environ(),
 	}
 }
 
@@ -33,7 +35,7 @@ func (c *Cmd) intoExecCmd(ctx context.Context) (*exec.Cmd, error) {
 	}
 
 	cmd := exec.CommandContext(ctx, c.args[0], c.args[1:]...)
-	cmd.Env = os.Environ()
+	cmd.Env = c.Env
 	return cmd, nil
 }
 
