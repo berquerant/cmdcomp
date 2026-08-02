@@ -26,6 +26,9 @@ type Config struct {
 	Shell           string
 	Delimiter       string
 	UseLabel        bool
+	Env             []string
+	LeftEnv         []string
+	RightEnv        []string
 
 	CommonArgs []string
 	LeftArgs   []string
@@ -63,6 +66,14 @@ func (c *Config) setTempDir() error {
 	}
 	c.TempDir = d
 	return nil
+}
+
+func (c Config) GetLeftEnv() []string {
+	return append(c.Env, c.LeftEnv...)
+}
+
+func (c Config) GetRightEnv() []string {
+	return append(c.Env, c.RightEnv...)
 }
 
 func (c Config) GetLeftPreprocess() []string {

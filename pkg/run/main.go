@@ -99,8 +99,43 @@ func (c *cmdLog) close(out string, err error) {
 	}
 }
 
-func (r *runner) runCmd(ctx context.Context, arg ...string) (string, error) {
+type category int
+
+const (
+	categoryCommon category = iota
+	categoryLeft
+	categoryRight
+)
+
+func (c category) String() string {
+	switch c {
+	case categoryCommon:
+		return "common"
+	case categoryLeft:
+		return "left"
+	case categoryRight:
+		return "right"
+	default:
+		return "unknown"
+	}
+}
+
+func (r *runner) cmdEnv(c category) []string {
+	switch c {
+	case categoryLeft:
+		return append(os.Environ(), r.GetLeftEnv()...)
+	case categoryRight:
+		return append(os.Environ(), r.GetRightEnv()...)
+	case categoryCommon:
+		return append(os.Environ(), r.Env...)
+	default:
+		return os.Environ()
+	}
+}
+
+func (r *runner) runCmd(ctx context.Context, target category, arg ...string) (string, error) {
 	c := execx.NewCmd(r.TempDir, arg...)
+	c.Env = r.cmdEnv(target)
 	x := newCmdLog(arg)
 	out, err := c.Run(ctx)
 	x.close(out, err)
@@ -108,9 +143,9 @@ func (r *runner) runCmd(ctx context.Context, arg ...string) (string, error) {
 	return out, err
 }
 
-func (r *runner) runGenCmd(ctx context.Context, target string, arg ...string) (string, error) {
+func (r *runner) runGenCmd(ctx context.Context, target category, arg ...string) (string, error) {
 	slog.Debug(fmt.Sprintf("start run %s", target), slog.Any("args", arg))
-	out, err := r.runCmd(ctx, arg...)
+	out, err := r.runCmd(ctx, target, arg...)
 	if err != nil {
 		return "", fmt.Errorf("%w: run %s", err, target)
 	}
@@ -129,7 +164,7 @@ func (r *runner) runInterceptors(ctx context.Context) error {
 		cmd := exec.CommandContext(ctx, r.Shell, "-c", p)
 		cmd.Stdout = os.Stderr // interceptor stdout cannot be mixed with diff stdout
 		cmd.Stderr = os.Stderr
-		cmd.Env = os.Environ()
+		cmd.Env = r.cmdEnv(categoryCommon)
 		x := newCmdLog(cmd.Args)
 		err := cmd.Run()
 		x.close("", err)
@@ -143,11 +178,11 @@ func (r *runner) runInterceptors(ctx context.Context) error {
 }
 
 func (r *runner) runLeftGenCmd(ctx context.Context) (string, error) {
-	return r.runGenCmd(ctx, "left", r.GetLeftArgs()...)
+	return r.runGenCmd(ctx, categoryLeft, r.GetLeftArgs()...)
 }
 
 func (r *runner) runRightGenCmd(ctx context.Context) (string, error) {
-	return r.runGenCmd(ctx, "right", r.GetRightArgs()...)
+	return r.runGenCmd(ctx, categoryRight, r.GetRightArgs()...)
 }
 
 type cmdResult struct {
@@ -212,7 +247,7 @@ func (r *runner) runGenCmds(ctx context.Context) (*cmdResult, error) {
 	return r.runGenCmdsConcurrently(ctx)
 }
 
-func (r *runner) runPipedCmd(ctx context.Context, title, target, input string, cmd ...string) (string, error) {
+func (r *runner) runPipedCmd(ctx context.Context, title string, target category, input string, cmd ...string) (string, error) {
 	if len(cmd) == 0 {
 		return input, nil
 	}
@@ -221,6 +256,7 @@ func (r *runner) runPipedCmd(ctx context.Context, title, target, input string, c
 	for i, p := range cmd {
 		slog.Debug(title, slog.Int("count", i), slog.String("cmd", p))
 		cmds[i] = r.newShellCmd(p)
+		cmds[i].Env = r.cmdEnv(target)
 	}
 
 	slog.Debug(fmt.Sprintf("start %s "+title, target), slog.String("in", input))
@@ -256,7 +292,7 @@ func (r *runner) runPreprocesses(ctx context.Context, left, right string) (*cmdR
 		eg, _             = errgroup.WithContext(ctx)
 	)
 	eg.Go(func() error {
-		out, err := r.runPipedCmd(ctx, "preprocess", "left", left, r.GetLeftPreprocess()...)
+		out, err := r.runPipedCmd(ctx, "preprocess", categoryLeft, left, r.GetLeftPreprocess()...)
 		if err != nil {
 			return err
 		}
@@ -264,7 +300,7 @@ func (r *runner) runPreprocesses(ctx context.Context, left, right string) (*cmdR
 		return nil
 	})
 	eg.Go(func() error {
-		out, err := r.runPipedCmd(ctx, "preprocess", "right", right, r.GetRightPreprocess()...)
+		out, err := r.runPipedCmd(ctx, "preprocess", categoryRight, right, r.GetRightPreprocess()...)
 		if err != nil {
 			return err
 		}
@@ -300,7 +336,7 @@ func (r *runner) runDiff(ctx context.Context, left, right string) error {
 	slog.Debug("start run diff", slog.Any("cmd", cmd.Args))
 	cmd.Stdout = r.Writer
 	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
+	cmd.Env = r.cmdEnv(categoryCommon)
 	x := newCmdLog(cmd.Args)
 	err := cmd.Run()
 	x.close("", err)

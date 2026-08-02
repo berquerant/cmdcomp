@@ -103,6 +103,7 @@ in other words, succeed even if the diff command returns exit status 1`)
 		useLabel                                    = fs.BoolP("label", "l", false, "use '--label' option of diff command")
 		interceptor                                 []string
 		preprocess, leftPreprocess, rightPreprocess []string
+		env, leftEnv, rightEnv                      []string
 		diff                                        string
 	)
 	// workaround: https://github.com/spf13/pflag/issues/370
@@ -113,11 +114,19 @@ in other words, succeed even if the diff command returns exit status 1`)
 		"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout",
 	)
 	fs.StringArrayVar(&leftPreprocess, "leftPreprocess", nil,
-		"process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout",
+		"additional left process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout",
 	)
 	fs.StringArrayVar(&rightPreprocess, "rightPreprocess", nil,
-		"process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout",
+		"additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout",
 	)
+	fs.StringArrayVar(&env, "env", nil,
+		`process environment variables;
+Passed to all processes along with os.Environ.
+--leftEnv is also passed to left output and left preprocess.
+--rightEnv is also passed to right output and right preprocess.`,
+	)
+	fs.StringArrayVar(&leftEnv, "leftEnv", nil, "left process environment variables")
+	fs.StringArrayVar(&rightEnv, "rightEnv", nil, "right process environment variables")
 	fs.StringVarP(&diff, "diff", "x", "diff",
 		"diff command; invoked like 'diff LEFT_FILE RIGHT_FILE'",
 	)
@@ -146,6 +155,9 @@ in other words, succeed even if the diff command returns exit status 1`)
 		Preprocess:      preprocess,
 		LeftPreprocess:  leftPreprocess,
 		RightPreprocess: rightPreprocess,
+		Env:             env,
+		LeftEnv:         leftEnv,
+		RightEnv:        rightEnv,
 	}
 
 	c.SetupLogger(os.Stderr)

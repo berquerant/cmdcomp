@@ -306,6 +306,27 @@ func TestMain(t *testing.T) {
 			args:   []string{"echo", "--", "a", "--", "b"},
 			errMsg: "exit status 1: run interceptor[0]",
 		},
+		{
+			title: "env",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				LeftEnv: []string{
+					"X=a",
+				},
+				RightEnv: []string{
+					"X=b",
+				},
+			},
+			args: []string{"bash", "-c", "echo $X"},
+			want: `1c1
+< a
+---
+> b
+`,
+			errMsg: "exit status 1",
+		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			var out bytes.Buffer
