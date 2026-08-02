@@ -99,6 +99,7 @@ func (Config) applyEnv(env, v []string) []string {
 			return fmt.Sprintf("$%s", k)
 		})
 	}
+	slog.Debug("apply env", slog.Any("before", v), slog.Any("after", s))
 	return s
 }
 
