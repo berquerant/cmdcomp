@@ -29,6 +29,7 @@ type Config struct {
 	Env             []string
 	LeftEnv         []string
 	RightEnv        []string
+	Cleanup         []string
 
 	CommonArgs []string
 	LeftArgs   []string
