@@ -15,28 +15,28 @@ var (
 )
 
 type Config struct {
-	ShowCmdLog      bool
-	Debug           bool
-	Interceptor     []string
-	Preprocess      []string
-	LeftPreprocess  []string
-	RightPreprocess []string
-	Diff            string
-	WorkDir         string
-	Shell           string
-	Delimiter       string
-	UseLabel        bool
-	Env             []string
-	LeftEnv         []string
-	RightEnv        []string
-	Cleanup         []string
+	ShowCmdLog      bool     `yaml:"showCmdLog"`
+	Debug           bool     `yaml:"debug"`
+	Interceptor     []string `yaml:"interceptor"`
+	Preprocess      []string `yaml:"preprocess"`
+	LeftPreprocess  []string `yaml:"leftPreprocess"`
+	RightPreprocess []string `yaml:"rightPreprocess"`
+	Diff            string   `yaml:"diff"`
+	WorkDir         string   `yaml:"workDir"`
+	Shell           string   `yaml:"shell"`
+	Delimiter       string   `yaml:"delimiter"`
+	UseLabel        bool     `yaml:"label"`
+	Env             []string `yaml:"env"`
+	LeftEnv         []string `yaml:"leftEnv"`
+	RightEnv        []string `yaml:"rightEnv"`
+	Cleanup         []string `yaml:"cleanup"`
 
-	CommonArgs []string
-	LeftArgs   []string
-	RightArgs  []string
+	CommonArgs []string `yaml:"commonArgs"`
+	LeftArgs   []string `yaml:"leftArgs"`
+	RightArgs  []string `yaml:"rightArgs"`
 
-	Writer  io.Writer `json:"-"`
-	TempDir string
+	Writer  io.Writer `json:"-" yaml:"-"`
+	TempDir string    `json:"-" yaml:"-"`
 }
 
 func (c *Config) Init(args []string) error {

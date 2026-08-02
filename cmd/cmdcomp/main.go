@@ -1,180 +1,25 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 
-	"github.com/berquerant/cmdcomp/pkg/config"
+	"github.com/berquerant/cmdcomp/pkg/cli"
 	"github.com/berquerant/cmdcomp/pkg/run"
-	"github.com/berquerant/cmdcomp/pkg/slicex"
-	"github.com/berquerant/cmdcomp/version"
-	"github.com/spf13/pflag"
 )
 
-const usage = `cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
-
-# Usage
-
-cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]
-
-# Examples
-
-// echo a > leftfile
-// echo b > rightfile
-// diff leftfile rightfile
-cmdcomp -- echo -- a -- b
-
-// echo a > leftfile
-// echo b > rightfile
-// diff -u leftfile rightfile
-cmdcomp -x 'diff -u' -- echo -- a -- b
-
-// echo a > leftfile
-// echo b > rightfile
-// diff -u leftfile rightfile --label echo___a --label echo___b
-cmdcomp -x 'diff -u' -l -- echo -- a -- b
-
-// echo a | sed 's|a|c|' > leftfile
-// echo b | sed 's|a|c|' > rightfile
-// diff leftfile rightfile
-cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b
-
-// helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Secret")' > leftfile
-// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Secret")' > rightfile
-// objdiff -c leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
-
-// helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > leftfile
-// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > rightfile
-// npx jsondiffpatch --format=jsonpatch leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -x 'npx jsondiffpatch --format=jsonpatch' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
-
-// helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > leftfile
-// helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > rightfile
-// diff -u --color leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -p 'gron' -x 'diff -u --color' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
-
-// helm template ./charts/datadog > leftfile
-// git checkout datadog-3.69.3
-// helm template ./charts/datadog > rightfile
-// objdiff -c leftfile rightfile
-cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
-
-// echo echo -- a > leftfile
-// echo echo -- b > rightfile
-// diff leftfile rightfile
-cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
-
-// cmdcomp --success -- echo -- a -- b > leftfile
-// cmdcomp --success -- echo -- a -- c > rightfile
-// diff leftfile rightfile
-cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
-
-// helm show values datadog/datadog --version 3.69.3 | yq -o json | gron > leftfile
-// helm show values datadog/datadog --version 3.164.1 | yq -o json | gron > rightfile
-// diff -u --color leftfile rightfile
-cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datadog/datadog --version -- 3.69.3 -- 3.164.1
-
-# Flags
-
-`
-
 func main() {
-	fs := pflag.NewFlagSet("main", pflag.ContinueOnError)
-	fs.Usage = func() {
-		fmt.Fprint(os.Stderr, usage)
-		fs.PrintDefaults()
-	}
-
-	var (
-		displayVersion = fs.Bool("version", false, "display version")
-		debug          = fs.Bool("debug", false, "enable debug logs")
-		showCmdLog     = fs.Bool("showCmdLog", false, "show command logs")
-		workDir        = fs.StringP("workDir", "w", "", "working directory; keep temporary files")
-		shell          = fs.StringP("shell", "s", "bash", "shell command to be executed")
-		delimiter      = fs.StringP("delimiter", "d", "--", `arguments delimiter;
-change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
-		success = fs.Bool("success", false, `exit successfully even if there are diffs;
-in other words, succeed even if the diff command returns exit status 1`)
-		useLabel                                    = fs.BoolP("label", "l", false, "use '--label' option of diff command")
-		interceptor                                 []string
-		cleanup                                     []string
-		preprocess, leftPreprocess, rightPreprocess []string
-		env, leftEnv, rightEnv                      []string
-		diff                                        string
-	)
-	// workaround: https://github.com/spf13/pflag/issues/370
-	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
-		"process after left command and before right command; invoked like 'interceptor'",
-	)
-	fs.StringArrayVar(&cleanup, "cleanup", nil,
-		"process before exiting cmdcomp process; invoked like 'cleanup'")
-	fs.StringArrayVarP(&preprocess, "preprocess", "p", nil,
-		"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout",
-	)
-	fs.StringArrayVar(&leftPreprocess, "leftPreprocess", nil,
-		"additional left process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout",
-	)
-	fs.StringArrayVar(&rightPreprocess, "rightPreprocess", nil,
-		"additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout",
-	)
-	fs.StringArrayVar(&env, "env", nil,
-		`process environment variables;
-Passed to all processes along with os.Environ.
---leftEnv is also passed to left output and left preprocess.
---rightEnv is also passed to right output and right preprocess.`,
-	)
-	fs.StringArrayVar(&leftEnv, "leftEnv", nil, "left process environment variables")
-	fs.StringArrayVar(&rightEnv, "rightEnv", nil, "right process environment variables")
-	fs.StringVarP(&diff, "diff", "x", "diff",
-		"diff command; invoked like 'diff LEFT_FILE RIGHT_FILE'",
-	)
-
-	before, after := slicex.Split(os.Args, "--")
-	err := fs.Parse(before)
-	if errors.Is(err, pflag.ErrHelp) {
-		return
-	}
-	fail(err)
-	if *displayVersion {
-		version.Write(os.Stdout)
+	c, err := cli.ParseConfig(os.Args, os.Stdout, os.Stderr)
+	if errors.Is(err, cli.ErrExit) {
 		return
 	}
 
-	c := &config.Config{
-		Writer:          os.Stdout,
-		Diff:            diff,
-		Shell:           *shell,
-		Delimiter:       *delimiter,
-		UseLabel:        *useLabel,
-		ShowCmdLog:      *showCmdLog,
-		Debug:           *debug,
-		WorkDir:         *workDir,
-		Interceptor:     interceptor,
-		Cleanup:         cleanup,
-		Preprocess:      preprocess,
-		LeftPreprocess:  leftPreprocess,
-		RightPreprocess: rightPreprocess,
-		Env:             env,
-		LeftEnv:         leftEnv,
-		RightEnv:        rightEnv,
-	}
-
-	c.SetupLogger(os.Stderr)
-	slog.Debug("parse args", slog.Any("args", before))
-	slog.Debug("init args", slog.Any("args", after))
-	fail(c.Init(after))
-
-	cj, _ := json.Marshal(c)
-	slog.Debug("config", slog.String("json", string(cj)))
-	if err := run.Main(c); err != nil {
+	if err := run.Main(&c.Config); err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			if *success && errors.Is(err, run.ErrDiff) && exitErr.ExitCode() == 1 {
+			if c.Success && errors.Is(err, run.ErrDiff) && exitErr.ExitCode() == 1 {
 				return
 			}
 			os.Exit(exitErr.ExitCode())
