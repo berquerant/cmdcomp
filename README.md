@@ -68,19 +68,21 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
 
 # Flags
 
-      --debug                     enable debug logs
-  -d, --delimiter string          arguments delimiter;
-                                  change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
-  -x, --diff string               diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
-  -i, --interceptor stringArray   process after left command and before right command; invoked like 'interceptor'
-  -l, --label                     use '--label' option of diff command
-  -p, --preprocess stringArray    process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
-  -s, --shell string              shell command to be executed (default "bash")
-      --showCmdLog                show command logs
-      --success                   exit successfully even if there are diffs;
-                                  in other words, succeed even if the diff command returns exit status 1
-      --version                   display version
-  -w, --workDir string            working directory; keep temporary files
+      --debug                         enable debug logs
+  -d, --delimiter string              arguments delimiter;
+                                      change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
+  -x, --diff string                   diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
+  -i, --interceptor stringArray       process after left command and before right command; invoked like 'interceptor'
+  -l, --label                         use '--label' option of diff command
+      --leftPreprocess stringArray    process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout
+  -p, --preprocess stringArray        process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
+      --rightPreprocess stringArray   process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout
+  -s, --shell string                  shell command to be executed (default "bash")
+      --showCmdLog                    show command logs
+      --success                       exit successfully even if there are diffs;
+                                      in other words, succeed even if the diff command returns exit status 1
+      --version                       display version
+  -w, --workDir string                working directory; keep temporary files
 ```
 
 ## Install

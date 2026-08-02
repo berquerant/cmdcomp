@@ -212,24 +212,23 @@ func (r *runner) runGenCmds(ctx context.Context) (*cmdResult, error) {
 	return r.runGenCmdsConcurrently(ctx)
 }
 
-func (r *runner) newPreprocessCmds() []*execx.Cmd {
-	xs := make([]*execx.Cmd, len(r.Preprocess))
-	for i, p := range r.Preprocess {
-		logger := slog.With(slog.Int("count", i), slog.String("preprocess", p))
-		logger.Debug("preprocess")
-		xs[i] = r.newShellCmd(p)
+func (r *runner) runPipedCmd(ctx context.Context, title, target, input string, cmd ...string) (string, error) {
+	if len(cmd) == 0 {
+		return input, nil
 	}
-	return xs
-}
 
-func (r *runner) runPreprocess(ctx context.Context, target, input string) (string, error) {
-	slog.Debug(fmt.Sprintf("start %s preprocess", target), slog.String("in", input))
+	cmds := make([]*execx.Cmd, len(cmd))
+	for i, p := range cmd {
+		slog.Debug(title, slog.Int("count", i), slog.String("cmd", p))
+		cmds[i] = r.newShellCmd(p)
+	}
+
+	slog.Debug(fmt.Sprintf("start %s "+title, target), slog.String("in", input))
 	stdin, err := os.Open(input)
 	if err != nil {
-		return "", fmt.Errorf("%w: run %s preprocess", err, target)
+		return "", fmt.Errorf("%w: run %s %s", err, target, title)
 	}
 	defer stdin.Close()
-	cmds := r.newPreprocessCmds()
 	p := execx.NewPipedCmd(ctx, r.TempDir, stdin, cmds...)
 	logs := make([]*cmdLog, len(cmds))
 	for i, x := range cmds {
@@ -245,26 +244,19 @@ func (r *runner) runPreprocess(ctx context.Context, target, input string) (strin
 		r.logC <- x
 	}
 	if err != nil {
-		return "", fmt.Errorf("%w: run %s preprocess", err, target)
+		return "", fmt.Errorf("%w: run %s %s", err, target, title)
 	}
-	slog.Debug(fmt.Sprintf("end %s preprocess", target), slog.String("out", p.Path()))
+	slog.Debug(fmt.Sprintf("end %s %s", title, target), slog.String("out", p.Path()))
 	return p.Path(), nil
 }
 
 func (r *runner) runPreprocesses(ctx context.Context, left, right string) (*cmdResult, error) {
-	if len(r.Preprocess) == 0 {
-		return &cmdResult{
-			leftOut:  left,
-			rightOut: right,
-		}, nil
-	}
-
 	var (
 		leftOut, rightOut string
 		eg, _             = errgroup.WithContext(ctx)
 	)
 	eg.Go(func() error {
-		out, err := r.runPreprocess(ctx, "left", left)
+		out, err := r.runPipedCmd(ctx, "preprocess", "left", left, r.GetLeftPreprocess()...)
 		if err != nil {
 			return err
 		}
@@ -272,7 +264,7 @@ func (r *runner) runPreprocesses(ctx context.Context, left, right string) (*cmdR
 		return nil
 	})
 	eg.Go(func() error {
-		out, err := r.runPreprocess(ctx, "right", right)
+		out, err := r.runPipedCmd(ctx, "preprocess", "right", right, r.GetRightPreprocess()...)
 		if err != nil {
 			return err
 		}

@@ -100,10 +100,10 @@ func main() {
 change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
 		success = fs.Bool("success", false, `exit successfully even if there are diffs;
 in other words, succeed even if the diff command returns exit status 1`)
-		useLabel    = fs.BoolP("label", "l", false, "use '--label' option of diff command")
-		interceptor []string
-		preprocess  []string
-		diff        string
+		useLabel                                    = fs.BoolP("label", "l", false, "use '--label' option of diff command")
+		interceptor                                 []string
+		preprocess, leftPreprocess, rightPreprocess []string
+		diff                                        string
 	)
 	// workaround: https://github.com/spf13/pflag/issues/370
 	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
@@ -111,6 +111,12 @@ in other words, succeed even if the diff command returns exit status 1`)
 	)
 	fs.StringArrayVarP(&preprocess, "preprocess", "p", nil,
 		"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout",
+	)
+	fs.StringArrayVar(&leftPreprocess, "leftPreprocess", nil,
+		"process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout",
+	)
+	fs.StringArrayVar(&rightPreprocess, "rightPreprocess", nil,
+		"process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout",
 	)
 	fs.StringVarP(&diff, "diff", "x", "diff",
 		"diff command; invoked like 'diff LEFT_FILE RIGHT_FILE'",
@@ -127,10 +133,21 @@ in other words, succeed even if the diff command returns exit status 1`)
 		return
 	}
 
-	c := config.NewConfig(os.Stdout, interceptor, preprocess, diff, *shell, *delimiter, *useLabel)
-	c.ShowCmdLog = *showCmdLog
-	c.Debug = *debug
-	c.WorkDir = *workDir
+	c := &config.Config{
+		Writer:          os.Stdout,
+		Diff:            diff,
+		Shell:           *shell,
+		Delimiter:       *delimiter,
+		UseLabel:        *useLabel,
+		ShowCmdLog:      *showCmdLog,
+		Debug:           *debug,
+		WorkDir:         *workDir,
+		Interceptor:     interceptor,
+		Preprocess:      preprocess,
+		LeftPreprocess:  leftPreprocess,
+		RightPreprocess: rightPreprocess,
+	}
+
 	c.SetupLogger(os.Stderr)
 	slog.Debug("parse args", slog.Any("args", before))
 	slog.Debug("init args", slog.Any("args", after))

@@ -133,6 +133,16 @@ func TestE2E(t *testing.T) {
 			wantStatus: 1,
 		},
 		{
+			title: "preprocess left and right",
+			arg:   `--leftPreprocess 'sed "s|a|c|"' --rightPreprocess 'sed "s|a|d|"' -- echo -- a -- a`,
+			want: `1c1
+< c
+---
+> d
+`,
+			wantStatus: 1,
+		},
+		{
 			title: "preprocess awk",
 			arg:   `-p "awk '{print \$1\"x\"}'" -- echo -- a -- b`,
 			want: `1c1
