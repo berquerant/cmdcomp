@@ -14,33 +14,18 @@ var (
 	ErrConfig = errors.New("Config")
 )
 
-func NewConfig(
-	w io.Writer,
-	interceptor, preprocess []string,
-	diff, shell, delimiter string,
-	useLabel bool,
-) *Config {
-	return &Config{
-		Interceptor: interceptor,
-		Preprocess:  preprocess,
-		Diff:        diff,
-		Shell:       shell,
-		Delimiter:   delimiter,
-		Writer:      w,
-		UseLabel:    useLabel,
-	}
-}
-
 type Config struct {
-	ShowCmdLog  bool
-	Debug       bool
-	Interceptor []string
-	Preprocess  []string
-	Diff        string
-	WorkDir     string
-	Shell       string
-	Delimiter   string
-	UseLabel    bool
+	ShowCmdLog      bool
+	Debug           bool
+	Interceptor     []string
+	Preprocess      []string
+	LeftPreprocess  []string
+	RightPreprocess []string
+	Diff            string
+	WorkDir         string
+	Shell           string
+	Delimiter       string
+	UseLabel        bool
 
 	CommonArgs []string
 	LeftArgs   []string
@@ -78,6 +63,14 @@ func (c *Config) setTempDir() error {
 	}
 	c.TempDir = d
 	return nil
+}
+
+func (c Config) GetLeftPreprocess() []string {
+	return append(c.Preprocess, c.LeftPreprocess...)
+}
+
+func (c Config) GetRightPreprocess() []string {
+	return append(c.Preprocess, c.RightPreprocess...)
 }
 
 func (c Config) GetLeftArgs() []string {

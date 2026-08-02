@@ -17,20 +17,18 @@ func TestMain(t *testing.T) {
 	t.Run("interceptor", func(t *testing.T) {
 		out := filepath.Join(t.TempDir(), "output")
 		var stdout bytes.Buffer
-		c := config.NewConfig(
-			&stdout,
-			[]string{
+		c := &config.Config{
+			Writer: &stdout,
+			Interceptor: []string{
 				"echo i1 >> " + out,
 				"echo i2 >> " + out,
 			},
-			nil,
-			"diff",
-			"bash",
-			"--",
-			false,
-		)
-		c.WorkDir = t.TempDir()
-		c.Debug = true
+			Diff:      "diff",
+			Shell:     "bash",
+			Delimiter: "--",
+			WorkDir:   t.TempDir(),
+			Debug:     true,
+		}
 		c.SetupLogger(os.Stderr)
 		assert.Nil(t, c.Init([]string{
 			"echo", "--", "a", "--", "b",
@@ -56,22 +54,34 @@ func TestMain(t *testing.T) {
 		errMsg  string
 	}{
 		{
-			title:   "no args",
-			c:       config.NewConfig(nil, nil, nil, "diff", "bash", "--", false),
+			title: "no args",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+			},
 			args:    []string{},
 			initErr: true,
 			errMsg:  "no args",
 		},
 		{
 			title: "left is equal to right",
-			c:     config.NewConfig(nil, nil, nil, "diff", "bash", "--", false),
-			args:  []string{"echo", "--", "a", "--", "a"},
-			want:  "",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+			},
+			args: []string{"echo", "--", "a", "--", "a"},
+			want: "",
 		},
 		{
 			title: "left is not equal to right",
-			c:     config.NewConfig(nil, nil, nil, "diff", "bash", "--", false),
-			args:  []string{"echo", "--", "a", "--", "b"},
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+			},
+			args: []string{"echo", "--", "a", "--", "b"},
 			want: `1c1
 < a
 ---
@@ -81,8 +91,13 @@ func TestMain(t *testing.T) {
 		},
 		{
 			title: "use label with unified diff",
-			c:     config.NewConfig(nil, nil, nil, "diff -u", "bash", "--", true),
-			args:  []string{"echo", "--", "a", "--", "b"},
+			c: &config.Config{
+				Diff:      "diff -u",
+				Shell:     "bash",
+				Delimiter: "--",
+				UseLabel:  true,
+			},
+			args: []string{"echo", "--", "a", "--", "b"},
 			want: `--- echo___a
 +++ echo___b
 @@ -1 +1 @@
@@ -93,8 +108,12 @@ func TestMain(t *testing.T) {
 		},
 		{
 			title: "change delimiter",
-			c:     config.NewConfig(nil, nil, nil, "diff", "bash", "---", false),
-			args:  []string{"echo", "---", "--", "a", "---", "b"},
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "---",
+			},
+			args: []string{"echo", "---", "--", "a", "---", "b"},
 			want: `1c1
 < -- a
 ---
@@ -104,8 +123,12 @@ func TestMain(t *testing.T) {
 		},
 		{
 			title: "left is not equal to right without common",
-			c:     config.NewConfig(nil, nil, nil, "diff", "bash", "--", false),
-			args:  []string{"--", "echo", "a", "--", "echo", "b"},
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+			},
+			args: []string{"--", "echo", "a", "--", "echo", "b"},
 			want: `1c1
 < a
 ---
@@ -115,9 +138,14 @@ func TestMain(t *testing.T) {
 		},
 		{
 			title: "preprocess1",
-			c: config.NewConfig(nil, nil, []string{
-				`sed 's|a|c|'`,
-			}, "diff", "bash", "--", false),
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Preprocess: []string{
+					`sed 's|a|c|'`,
+				},
+			},
 			args: []string{"echo", "--", "a", "--", "b"},
 			want: `1c1
 < c
@@ -128,10 +156,15 @@ func TestMain(t *testing.T) {
 		},
 		{
 			title: "preprocess2",
-			c: config.NewConfig(nil, nil, []string{
-				`sed 's|a|c|'`,
-				`sed 's|b|d|'`,
-			}, "diff", "bash", "--", false),
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Preprocess: []string{
+					`sed 's|a|c|'`,
+					`sed 's|b|d|'`,
+				},
+			},
 			args: []string{"echo", "--", "a", "--", "b"},
 			want: `1c1
 < c
@@ -141,9 +174,70 @@ func TestMain(t *testing.T) {
 			errMsg: "exit status 1",
 		},
 		{
+			title: "left preprocess",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				LeftPreprocess: []string{
+					`sed 's|a|c|'`,
+				},
+			},
+			args: []string{"echo", "--", "a", "--", "a"},
+			want: `1c1
+< c
+---
+> a
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "right preprocess",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				RightPreprocess: []string{
+					`sed 's|b|d|'`,
+				},
+			},
+			args: []string{"echo", "--", "b", "--", "b"},
+			want: `1c1
+< b
+---
+> d
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "right preprocess with preprocess",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Preprocess: []string{
+					`sed 's|a|b|'`,
+				},
+				RightPreprocess: []string{
+					`sed 's|b|d|'`,
+				},
+			},
+			args: []string{"echo", "--", "a", "--", "b"},
+			want: `1c1
+< b
+---
+> d
+`,
+			errMsg: "exit status 1",
+		},
+		{
 			title: "customize diff",
-			c:     config.NewConfig(nil, nil, nil, "diff -u --label L --label R", "bash", "--", false),
-			args:  []string{"echo", "--", "a", "--", "b"},
+			c: &config.Config{
+				Diff:      "diff -u --label L --label R",
+				Shell:     "bash",
+				Delimiter: "--",
+			},
+			args: []string{"echo", "--", "a", "--", "b"},
 			want: `--- L
 +++ R
 @@ -1 +1 @@
@@ -153,39 +247,62 @@ func TestMain(t *testing.T) {
 			errMsg: "exit status 1",
 		},
 		{
-			title:  "left fail",
-			c:      config.NewConfig(nil, nil, nil, "diff", "bash", "--", false),
+			title: "left fail",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+			},
 			args:   []string{"bash", "-c", "--", "exit 2", "--", "echo b"},
 			errMsg: "exit status 2: run left",
 		},
 		{
-			title:  "right fail",
-			c:      config.NewConfig(nil, nil, nil, "diff", "bash", "--", false),
+			title: "right fail",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+			},
 			args:   []string{"bash", "-c", "--", "echo", "a", "--", "exit 2"},
 			errMsg: "exit status 2: run right",
 		},
 		{
 			title: "preprocess right fail",
-			c: config.NewConfig(nil, nil, []string{
-				`grep "a"`,
-			}, "diff", "bash", "--", false),
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Preprocess: []string{
+					`grep "a"`,
+				},
+			},
 			args:   []string{"echo", "--", "a", "--", "b"},
 			errMsg: "preprocess",
 		},
 		{
 			title: "preprocess left fail",
-			c: config.NewConfig(nil, nil, []string{
-				`grep "a"`,
-				`grep "b"`,
-			}, "diff", "bash", "--", false),
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Preprocess: []string{
+					`grep "a"`,
+					`grep "b"`,
+				},
+			},
 			args:   []string{"echo", "--", "a", "--", "a"},
 			errMsg: "preprocess",
 		},
 		{
 			title: "interceptor1 fail",
-			c: config.NewConfig(nil, []string{
-				"exit 1",
-			}, nil, "diff", "bash", "--", false),
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Interceptor: []string{
+					`exit 1`,
+				},
+			},
 			args:   []string{"echo", "--", "a", "--", "b"},
 			errMsg: "exit status 1: run interceptor[0]",
 		},
