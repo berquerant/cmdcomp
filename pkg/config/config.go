@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/berquerant/cmdcomp/pkg/slicex"
 )
@@ -15,28 +16,28 @@ var (
 )
 
 type Config struct {
-	ShowCmdLog      bool
-	Debug           bool
-	Interceptor     []string
-	Preprocess      []string
-	LeftPreprocess  []string
-	RightPreprocess []string
-	Diff            string
-	WorkDir         string
-	Shell           string
-	Delimiter       string
-	UseLabel        bool
-	Env             []string
-	LeftEnv         []string
-	RightEnv        []string
-	Cleanup         []string
+	ShowCmdLog      bool     `yaml:"showCmdLog"`
+	Debug           bool     `yaml:"debug"`
+	Interceptor     []string `yaml:"interceptor"`
+	Preprocess      []string `yaml:"preprocess"`
+	LeftPreprocess  []string `yaml:"leftPreprocess"`
+	RightPreprocess []string `yaml:"rightPreprocess"`
+	Diff            string   `yaml:"diff"`
+	WorkDir         string   `yaml:"workDir"`
+	Shell           string   `yaml:"shell"`
+	Delimiter       string   `yaml:"delimiter"`
+	UseLabel        bool     `yaml:"label"`
+	Env             []string `yaml:"env"`
+	LeftEnv         []string `yaml:"leftEnv"`
+	RightEnv        []string `yaml:"rightEnv"`
+	Cleanup         []string `yaml:"cleanup"`
 
-	CommonArgs []string
-	LeftArgs   []string
-	RightArgs  []string
+	CommonArgs []string `yaml:"commonArgs"`
+	LeftArgs   []string `yaml:"leftArgs"`
+	RightArgs  []string `yaml:"rightArgs"`
 
-	Writer  io.Writer `json:"-"`
-	TempDir string
+	Writer  io.Writer `json:"-" yaml:"-"`
+	TempDir string    `json:"-" yaml:"-"`
 }
 
 func (c *Config) Init(args []string) error {
@@ -77,20 +78,53 @@ func (c Config) GetRightEnv() []string {
 	return append(c.Env, c.RightEnv...)
 }
 
+func (Config) applyEnv(env, v []string) []string {
+	d := map[string]string{}
+	for _, x := range env {
+		xs := strings.SplitN(x, "=", 2)
+		switch len(xs) {
+		case 2:
+			d[xs[0]] = xs[1]
+		case 1:
+			d[xs[0]] = ""
+		}
+	}
+
+	s := make([]string, len(v))
+	for i, x := range v {
+		s[i] = os.Expand(x, func(k string) string {
+			if v, ok := d[k]; ok {
+				return v
+			}
+			return fmt.Sprintf("$%s", k)
+		})
+	}
+	slog.Debug("apply env", slog.Any("before", v), slog.Any("after", s))
+	return s
+}
+
+func (c Config) applyLeftEnv(v []string) []string {
+	return c.applyEnv(c.GetLeftEnv(), v)
+}
+
+func (c Config) applyRightEnv(v []string) []string {
+	return c.applyEnv(c.GetRightEnv(), v)
+}
+
 func (c Config) GetLeftPreprocess() []string {
-	return append(c.Preprocess, c.LeftPreprocess...)
+	return c.applyLeftEnv(append(c.Preprocess, c.LeftPreprocess...))
 }
 
 func (c Config) GetRightPreprocess() []string {
-	return append(c.Preprocess, c.RightPreprocess...)
+	return c.applyRightEnv(append(c.Preprocess, c.RightPreprocess...))
 }
 
 func (c Config) GetLeftArgs() []string {
-	return append(c.CommonArgs, c.LeftArgs...)
+	return c.applyLeftEnv(append(c.CommonArgs, c.LeftArgs...))
 }
 
 func (c Config) GetRightArgs() []string {
-	return append(c.CommonArgs, c.RightArgs...)
+	return c.applyRightEnv(append(c.CommonArgs, c.RightArgs...))
 }
 
 func (c *Config) setArgs(args []string) error {

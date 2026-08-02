@@ -1,17 +1,42 @@
-# cmdcomp
+package cli
 
-````
-cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
+import (
+	"fmt"
+	"strings"
 
-## Usage
+	"github.com/goccy/go-yaml"
+)
 
-```shell
-cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]```
+type usageBuilder struct{}
 
-## Examples
+func (u usageBuilder) build() string {
+	return strings.Join([]string{
+		u.header(),
+		u.usage(),
+		u.examples(),
+		u.configFile(),
+		u.trailer(),
+	}, "\n\n")
+}
 
-```shell
-# echo a > leftfile
+func (usageBuilder) header() string {
+	return `cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff`
+}
+
+func (usageBuilder) code(lang, s string) string {
+	return fmt.Sprintf("```%s\n%s```", lang, s)
+}
+
+func (u usageBuilder) usage() string {
+	return `## Usage
+
+` + u.code("shell", "cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]")
+}
+
+func (u usageBuilder) examples() string {
+	return `## Examples
+
+` + u.code("shell", `# echo a > leftfile
 # echo b > rightfile
 # diff leftfile rightfile
 cmdcomp -- echo -- a -- b
@@ -66,105 +91,44 @@ cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
 # helm show values datadog/datadog --version 3.164.1 | yq -o json | gron > rightfile
 # diff -u --color leftfile rightfile
 cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datadog/datadog --version -- 3.69.3 -- 3.164.1
-```
+`)
+}
 
-## Config file
+func (u usageBuilder) configFile() string {
+	b, _ := yaml.MarshalWithOptions(newConfigExample(), yaml.Indent(2), yaml.IndentSequence(true))
+	return `## Config file
 
 ### Format
 
-```yaml
-presets:
-  example:
-    config:
-      showCmdLog: true
-      debug: true
-      interceptor:
-        - echo interceptor
-      preprocess:
-        - grep common
-      leftPreprocess:
-        - grep left
-      rightPreprocess:
-        - grep right
-      diff: diff
-      workDir: workdir
-      shell: bash
-      delimiter: --
-      label: true
-      env:
-        - X=1
-      leftEnv:
-        - Y=2
-      rightEnv:
-        - Y=3
-      cleanup:
-        - echo cleanup
-      commonArgs:
-        - echo
-      leftArgs:
-        - common left
-      rightArgs:
-        - common right
-    success: true
-```
+` + u.code("yaml", string(b)) + `
 
 ### Usage
 
-```shell
-# use "example" preset
+` + u.code("shell", `# use "example" preset
 # overriding "diff" option
 cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
-```
+`) + `
 
 ### Examples
 
-```yaml
-presets:
+` + u.code("yaml", `presets:
   sentry:
     config:
       diff: objdiff -cv
       commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
-```
+`) + `
 
 then
 
-```shell
-# helm template sentry/sentry --version 28.0.3 > leftfile
+` + u.code("shell", `# helm template sentry/sentry --version 28.0.3 > leftfile
 # helm template sentry/sentry --version 29.5.1 > rightfile
 # objdiff -cv leftfile rightfile
 cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'
-```
+`)
+}
 
-## Flags
+func (usageBuilder) trailer() string {
+	return `## Flags
 
-      --cleanup stringArray           process before exiting cmdcomp process; invoked like 'cleanup'
-      --config string                 config file path
-      --debug                         enable debug logs
-  -d, --delimiter string              arguments delimiter;
-                                      change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
-  -x, --diff string                   diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
-      --env stringArray               process environment variables;
-                                      Passed to all processes along with os.Environ.
-                                      --leftEnv is also passed to left output and left preprocess.
-                                      --rightEnv is also passed to right output and right preprocess.
-  -i, --interceptor stringArray       process after left command and before right command; invoked like 'interceptor'
-  -l, --label                         use '--label' option of diff command
-      --leftEnv stringArray           left process environment variables
-      --leftPreprocess stringArray    additional left process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout
-  -p, --preprocess stringArray        process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
-      --preset string                 name of preset to be used
-      --rightEnv stringArray          right process environment variables
-      --rightPreprocess stringArray   additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout
-  -s, --shell string                  shell command to be executed (default "bash")
-      --showCmdLog                    show command logs
-      --success                       exit successfully even if there are diffs;
-                                      in other words, succeed even if the diff command returns exit status 1
-      --version                       display version
-  -w, --workDir string                working directory; keep temporary files
-````
-
-## Install
-
-``` shell
-go install github.com/berquerant/cmdcomp/cmd/cmdcomp@latest
-```
+`
+}
