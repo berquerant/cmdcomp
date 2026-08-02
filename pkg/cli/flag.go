@@ -87,15 +87,15 @@ Passed to all processes along with os.Environ.
 	if err != nil {
 		return nil, err
 	}
-	if *configPath != "" {
-		if _, ok := cs.Find(*presetName); !ok {
-			return nil, fmt.Errorf("preset %s not found", *presetName)
-		}
-	}
 
-	c, ok := cs.Find(*presetName)
-	if ok {
-		slog.Info("use preset", slog.String("preset", *presetName))
+	var c *Config
+	if p := *presetName; p != "" {
+		x, ok := cs.Find(p)
+		if !ok {
+			return nil, fmt.Errorf("preset not found %s", p)
+		}
+		c = x
+		slog.Info("use preset", slog.String("preset", p))
 	} else {
 		c = newDefaultConfig()
 	}
