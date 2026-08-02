@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/berquerant/cmdcomp/pkg/slicex"
 )
@@ -77,20 +78,52 @@ func (c Config) GetRightEnv() []string {
 	return append(c.Env, c.RightEnv...)
 }
 
+func (Config) applyEnv(env, v []string) []string {
+	d := map[string]string{}
+	for _, x := range env {
+		xs := strings.SplitN(x, "=", 2)
+		switch len(xs) {
+		case 2:
+			d[xs[0]] = xs[1]
+		case 1:
+			d[xs[0]] = ""
+		}
+	}
+
+	s := make([]string, len(v))
+	for i, x := range v {
+		s[i] = os.Expand(x, func(k string) string {
+			if v, ok := d[k]; ok {
+				return v
+			}
+			return fmt.Sprintf("$%s", k)
+		})
+	}
+	return s
+}
+
+func (c Config) applyLeftEnv(v []string) []string {
+	return c.applyEnv(c.GetLeftEnv(), v)
+}
+
+func (c Config) applyRightEnv(v []string) []string {
+	return c.applyEnv(c.GetRightEnv(), v)
+}
+
 func (c Config) GetLeftPreprocess() []string {
-	return append(c.Preprocess, c.LeftPreprocess...)
+	return c.applyLeftEnv(append(c.Preprocess, c.LeftPreprocess...))
 }
 
 func (c Config) GetRightPreprocess() []string {
-	return append(c.Preprocess, c.RightPreprocess...)
+	return c.applyRightEnv(append(c.Preprocess, c.RightPreprocess...))
 }
 
 func (c Config) GetLeftArgs() []string {
-	return append(c.CommonArgs, c.LeftArgs...)
+	return c.applyLeftEnv(append(c.CommonArgs, c.LeftArgs...))
 }
 
 func (c Config) GetRightArgs() []string {
-	return append(c.CommonArgs, c.RightArgs...)
+	return c.applyRightEnv(append(c.CommonArgs, c.RightArgs...))
 }
 
 func (c *Config) setArgs(args []string) error {

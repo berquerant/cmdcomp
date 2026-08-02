@@ -160,8 +160,18 @@ echo "${X}=${Y}"
 			wantStatus: 1,
 		},
 		{
-			title: "env",
+			title: "env script",
 			arg:   `--env "X=x" --leftEnv "Y=1" --rightEnv "Y=2" -- ` + envEcho,
+			want: `1c1
+< x=1
+---
+> x=2
+`,
+			wantStatus: 1,
+		},
+		{
+			title: "env",
+			arg:   `--env "X=x" --leftEnv "Y=1" --rightEnv "Y=2" -- echo '$X=$Y'`,
 			want: `1c1
 < x=1
 ---
