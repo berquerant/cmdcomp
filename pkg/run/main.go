@@ -157,6 +157,26 @@ func (r *runner) newShellCmd(arg ...string) *execx.Cmd {
 	return execx.NewCmd(r.TempDir, append([]string{r.Shell, "-c"}, arg...)...)
 }
 
+func (r *runner) runCleanup(ctx context.Context) error {
+	for i, p := range r.Cleanup {
+		logger := slog.With(slog.Int("count", i), slog.String("cleanup", p))
+		logger.Debug("start run cleanup")
+		cmd := exec.CommandContext(ctx, r.Shell, "-c", p)
+		cmd.Stdout = os.Stderr // cleanup stdout cannot be mixed with diff stdout
+		cmd.Stderr = os.Stderr
+		cmd.Env = r.cmdEnv(categoryCommon)
+		x := newCmdLog(cmd.Args)
+		err := cmd.Run()
+		x.close("", err)
+		r.logC <- x
+		if err != nil {
+			return fmt.Errorf("%w: run cleanup[%d]", err, i)
+		}
+		slog.Debug("end run cleanup")
+	}
+	return nil
+}
+
 func (r *runner) runInterceptors(ctx context.Context) error {
 	for i, p := range r.Interceptor {
 		logger := slog.With(slog.Int("count", i), slog.String("interceptor", p))
@@ -348,18 +368,28 @@ func (r *runner) runDiff(ctx context.Context, left, right string) error {
 	return err
 }
 
-func (r *runner) run(ctx context.Context) error {
-	defer r.Close()
+func (r *runner) run(ctx context.Context) (resultErr error) {
+	var (
+		result *cmdResult
+		err    error
+	)
 
-	result, err := r.runGenCmds(ctx)
+	defer func() {
+		cleanupErr := r.runCleanup(ctx)
+		resultErr = errors.Join(err, cleanupErr)
+		_ = r.Close()
+	}()
+
+	result, err = r.runGenCmds(ctx)
 	if err != nil {
-		return err
+		return
 	}
 
 	result, err = r.runPreprocesses(ctx, result.leftOut, result.rightOut)
 	if err != nil {
-		return err
+		return
 	}
 
-	return r.runDiff(ctx, result.leftOut, result.rightOut)
+	err = r.runDiff(ctx, result.leftOut, result.rightOut)
+	return
 }

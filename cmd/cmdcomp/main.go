@@ -102,6 +102,7 @@ change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
 in other words, succeed even if the diff command returns exit status 1`)
 		useLabel                                    = fs.BoolP("label", "l", false, "use '--label' option of diff command")
 		interceptor                                 []string
+		cleanup                                     []string
 		preprocess, leftPreprocess, rightPreprocess []string
 		env, leftEnv, rightEnv                      []string
 		diff                                        string
@@ -110,6 +111,8 @@ in other words, succeed even if the diff command returns exit status 1`)
 	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
 		"process after left command and before right command; invoked like 'interceptor'",
 	)
+	fs.StringArrayVar(&cleanup, "cleanup", nil,
+		"process before exiting cmdcomp process; invoked like 'cleanup'")
 	fs.StringArrayVarP(&preprocess, "preprocess", "p", nil,
 		"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout",
 	)
@@ -152,6 +155,7 @@ Passed to all processes along with os.Environ.
 		Debug:           *debug,
 		WorkDir:         *workDir,
 		Interceptor:     interceptor,
+		Cleanup:         cleanup,
 		Preprocess:      preprocess,
 		LeftPreprocess:  leftPreprocess,
 		RightPreprocess: rightPreprocess,

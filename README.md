@@ -68,6 +68,7 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
 
 # Flags
 
+      --cleanup stringArray           process before exiting cmdcomp process; invoked like 'cleanup'
       --debug                         enable debug logs
   -d, --delimiter string              arguments delimiter;
                                       change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")

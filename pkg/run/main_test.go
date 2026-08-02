@@ -14,6 +14,41 @@ import (
 )
 
 func TestMain(t *testing.T) {
+	t.Run("cleanup", func(t *testing.T) {
+		out := filepath.Join(t.TempDir(), "output")
+		var stdout bytes.Buffer
+		c := &config.Config{
+			Writer: &stdout,
+			Cleanup: []string{
+				"echo i1 >> " + out,
+				"echo i2 >> " + out,
+			},
+			Diff:      "diff",
+			Shell:     "bash",
+			Delimiter: "--",
+			WorkDir:   t.TempDir(),
+			Debug:     true,
+		}
+		c.SetupLogger(os.Stderr)
+		assert.Nil(t, c.Init([]string{
+			"echo", "--", "a", "--", "b",
+		}))
+		err := run.Main(c)
+		assert.NotNil(t, err)
+		var exitErr *exec.ExitError
+		assert.True(t, errors.As(err, &exitErr))
+		assert.Equal(t, 1, exitErr.ExitCode())
+		assert.Equal(t, `1c1
+< a
+---
+> b
+`, stdout.String())
+		outBytes, err := os.ReadFile(out)
+		assert.Nil(t, err)
+		assert.Equal(t, `i1
+i2
+`, string(outBytes))
+	})
 	t.Run("interceptor", func(t *testing.T) {
 		out := filepath.Join(t.TempDir(), "output")
 		var stdout bytes.Buffer
@@ -43,6 +78,11 @@ func TestMain(t *testing.T) {
 ---
 > b
 `, stdout.String())
+		outBytes, err := os.ReadFile(out)
+		assert.Nil(t, err)
+		assert.Equal(t, `i1
+i2
+`, string(outBytes))
 	})
 
 	for _, tc := range []struct {
