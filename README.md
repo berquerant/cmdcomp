@@ -116,6 +116,25 @@ presets:
 cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
 ```
 
+### Examples
+
+```yaml
+presets:
+  sentry:
+    config:
+      diff: objdiff -cv
+      commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
+```
+
+then
+
+```shell
+# helm template sentry/sentry --version 28.0.3 > leftfile
+# helm template sentry/sentry --version 29.5.1 > rightfile
+# objdiff -cv leftfile rightfile
+cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'
+```
+
 ## Flags
 
       --cleanup stringArray           process before exiting cmdcomp process; invoked like 'cleanup'
