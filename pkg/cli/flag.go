@@ -96,7 +96,7 @@ Passed to all processes along with os.Environ.
 			return nil, fmt.Errorf("preset not found %s", p)
 		}
 		c = x
-		slog.Info("use preset", slog.String("preset", p))
+		slog.Debug("use preset", slog.String("preset", p))
 	} else {
 		c = newDefaultConfig()
 	}
