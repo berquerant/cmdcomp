@@ -108,12 +108,56 @@ presets:
     success: true
 ```
 
+### Builtin config
+
+```yaml
+presets:
+  branch:
+    config:
+      interceptor:
+        - git switch ${RIGHT}
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+      cleanup:
+        - git switch ${ORIG}
+  json:
+    config:
+      preprocess:
+        - jq -S .
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+  k8s:
+    config:
+      diff: objdiff -cv
+      shell: bash
+      delimiter: --
+  k8s-clean:
+    config:
+      preprocess:
+        - yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'
+      diff: objdiff -cv
+      shell: bash
+      delimiter: --
+  yml:
+    config:
+      preprocess:
+        - yq -P 'sort_keys(..)'
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+```
+
 ### Usage
 
 ```shell
 # use "example" preset
 # overriding "diff" option
 cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
+
+# use builtin "json" preset
+cmdcomp --preset json -- ...
 ```
 
 ### Examples
@@ -138,7 +182,7 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
 ## Flags
 
       --cleanup stringArray           process before exiting cmdcomp process; invoked like 'cleanup'
-      --config string                 config file path
+      --config string                 config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir
       --debug                         enable debug logs
   -d, --delimiter string              arguments delimiter;
                                       change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")

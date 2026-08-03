@@ -115,6 +115,9 @@ func (u usageBuilder) configFile() string {
 ` + u.code("shell", `# use "example" preset
 # overriding "diff" option
 cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
+
+# use builtin "json" preset
+cmdcomp --preset json -- ...
 `) + `
 
 ### Examples
