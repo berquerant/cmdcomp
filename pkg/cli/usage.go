@@ -94,19 +94,30 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
 `)
 }
 
+func (usageBuilder) marshalYaml(v any) string {
+	b, _ := yaml.MarshalWithOptions(v, yaml.Indent(2), yaml.IndentSequence(true))
+	return string(b)
+}
+
 func (u usageBuilder) configFile() string {
-	b, _ := yaml.MarshalWithOptions(newConfigExample(), yaml.Indent(2), yaml.IndentSequence(true))
 	return `## Config file
 
 ### Format
 
-` + u.code("yaml", string(b)) + `
+` + u.code("yaml", u.marshalYaml(newConfigExample())) + `
+
+### Builtin config
+
+` + u.code("yaml", u.marshalYaml(builtinConfigSet())) + `
 
 ### Usage
 
 ` + u.code("shell", `# use "example" preset
 # overriding "diff" option
 cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
+
+# use builtin "json" preset
+cmdcomp --preset json -- ...
 `) + `
 
 ### Examples

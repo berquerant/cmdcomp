@@ -16,25 +16,25 @@ var (
 )
 
 type Config struct {
-	ShowCmdLog      bool     `yaml:"showCmdLog"`
-	Debug           bool     `yaml:"debug"`
-	Interceptor     []string `yaml:"interceptor"`
-	Preprocess      []string `yaml:"preprocess"`
-	LeftPreprocess  []string `yaml:"leftPreprocess"`
-	RightPreprocess []string `yaml:"rightPreprocess"`
-	Diff            string   `yaml:"diff"`
-	WorkDir         string   `yaml:"workDir"`
-	Shell           string   `yaml:"shell"`
-	Delimiter       string   `yaml:"delimiter"`
-	UseLabel        bool     `yaml:"label"`
-	Env             []string `yaml:"env"`
-	LeftEnv         []string `yaml:"leftEnv"`
-	RightEnv        []string `yaml:"rightEnv"`
-	Cleanup         []string `yaml:"cleanup"`
+	ShowCmdLog      bool     `yaml:"showCmdLog,omitempty"`
+	Debug           bool     `yaml:"debug,omitempty"`
+	Interceptor     []string `yaml:"interceptor,omitempty"`
+	Preprocess      []string `yaml:"preprocess,omitempty"`
+	LeftPreprocess  []string `yaml:"leftPreprocess,omitempty"`
+	RightPreprocess []string `yaml:"rightPreprocess,omitempty"`
+	Diff            string   `yaml:"diff,omitempty"`
+	WorkDir         string   `yaml:"workDir,omitempty"`
+	Shell           string   `yaml:"shell,omitempty"`
+	Delimiter       string   `yaml:"delimiter,omitempty"`
+	UseLabel        bool     `yaml:"label,omitempty"`
+	Env             []string `yaml:"env,omitempty"`
+	LeftEnv         []string `yaml:"leftEnv,omitempty"`
+	RightEnv        []string `yaml:"rightEnv,omitempty"`
+	Cleanup         []string `yaml:"cleanup,omitempty"`
 
-	CommonArgs []string `yaml:"commonArgs"`
-	LeftArgs   []string `yaml:"leftArgs"`
-	RightArgs  []string `yaml:"rightArgs"`
+	CommonArgs []string `yaml:"commonArgs,omitempty"`
+	LeftArgs   []string `yaml:"leftArgs,omitempty"`
+	RightArgs  []string `yaml:"rightArgs,omitempty"`
 
 	Writer  io.Writer `json:"-" yaml:"-"`
 	TempDir string    `json:"-" yaml:"-"`
