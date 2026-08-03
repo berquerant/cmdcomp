@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -11,7 +12,7 @@ import (
 
 type Config struct {
 	config.Config
-	Success bool `yaml:"success"`
+	Success bool `yaml:"success,omitempty"`
 }
 
 func newDefaultConfig() *Config {
@@ -33,7 +34,23 @@ func (c *ConfigSet) Find(name string) (*Config, bool) {
 	return x, ok
 }
 
+func (c *ConfigSet) merge(x *ConfigSet) *ConfigSet {
+	if c.Presets == nil {
+		c.Presets = map[string]*Config{}
+	}
+	maps.Copy(c.Presets, x.Presets)
+	return c
+}
+
 func LoadConfigSet(path string) (*ConfigSet, error) {
+	c, err := loadConfigSetOrDefault(path)
+	if err != nil {
+		return nil, err
+	}
+	return c.merge(builtinConfigSet()), nil
+}
+
+func loadConfigSetOrDefault(path string) (*ConfigSet, error) {
 	if path == "" {
 		return loadDefaultConfigSet(), nil
 	}
