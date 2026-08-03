@@ -34,8 +34,9 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
 		success = fs.Bool("success", false, `exit successfully even if there are diffs;
 in other words, succeed even if the diff command returns exit status 1`)
-		useLabel                                    = fs.BoolP("label", "l", false, "use '--label' option of diff command")
-		configPath                                  = fs.String("config", "", "config file path")
+		useLabel   = fs.BoolP("label", "l", false, "use '--label' option of diff command")
+		configPath = fs.String("config", "",
+			"config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir")
 		presetName                                  = fs.String("preset", "", "name of preset to be used")
 		interceptor                                 []string
 		cleanup                                     []string

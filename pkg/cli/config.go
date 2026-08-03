@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/goccy/go-yaml"
@@ -34,14 +35,26 @@ func (c *ConfigSet) Find(name string) (*Config, bool) {
 
 func LoadConfigSet(path string) (*ConfigSet, error) {
 	if path == "" {
-		var c ConfigSet
-		return &c, nil
+		return loadDefaultConfigSet(), nil
 	}
 	c, err := loadConfigSet(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to load config file %s", err, path)
 	}
 	return c, nil
+}
+
+func loadDefaultConfigSet() *ConfigSet {
+	for _, x := range defaultConfigPaths() {
+		if _, err := os.Stat(x); err != nil {
+			continue
+		}
+		if c, err := loadConfigSet(x); err == nil {
+			return c
+		}
+	}
+	var c ConfigSet
+	return &c
 }
 
 func loadConfigSet(path string) (*ConfigSet, error) {
@@ -123,4 +136,15 @@ func newConfigExample() *ConfigSet {
 			},
 		},
 	}
+}
+
+func defaultConfigPaths() []string {
+	xs := []string{}
+	if x, err := os.UserConfigDir(); err == nil {
+		xs = append(xs, filepath.Join(x, "cmdcomp", "config.yml"))
+	}
+	if x, err := os.UserHomeDir(); err == nil {
+		xs = append(xs, filepath.Join(x, ".cmdcomp.yml"))
+	}
+	return append(xs, ".cmdcomp.yml")
 }
