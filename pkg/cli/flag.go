@@ -38,13 +38,14 @@ in other words, succeed even if the diff command returns exit status 1`)
 		configPath = fs.String("config", "",
 			"config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir")
 		presetName                                  = fs.String("preset", "", "name of preset to be used")
-		interceptor                                 []string
-		cleanup                                     []string
+		startup, interceptor, cleanup               []string
 		preprocess, leftPreprocess, rightPreprocess []string
 		env, leftEnv, rightEnv                      []string
 		diff                                        string
 	)
 	// workaround: https://github.com/spf13/pflag/issues/370
+	fs.StringArrayVar(&startup, "startup", nil,
+		"process before running commands; invoked like 'startup'")
 	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
 		"process after left command and before right command; invoked like 'interceptor'",
 	)
@@ -118,6 +119,8 @@ Passed to all processes along with os.Environ.
 			c.Success = *success
 		case "label":
 			c.UseLabel = *useLabel
+		case "startup":
+			c.Startup = startup
 		case "interceptor":
 			c.Interceptor = interceptor
 		case "cleanup":

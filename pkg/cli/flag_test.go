@@ -65,6 +65,28 @@ func TestParseConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "startup",
+			args: []string{
+				"--startup", "echo s1",
+				"--startup", "echo s2",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				Config: config.Config{
+					Diff:      "diff",
+					Delimiter: "--",
+					Shell:     "bash",
+					Startup: []string{
+						"echo s1",
+						"echo s2",
+					},
+					CommonArgs: []string{
+						"echo", "x",
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)

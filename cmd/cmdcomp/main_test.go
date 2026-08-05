@@ -237,6 +237,27 @@ echo "${X}=${Y}"
 > b
 `, got.String())
 	})
+
+	t.Run("startup", func(t *testing.T) {
+		out := filepath.Join(t.TempDir(), "out")
+		arg := fmt.Sprintf(
+			`--startup 'touch %s' -- echo -- a -- b`,
+			out,
+		)
+		var got bytes.Buffer
+		err := run(t, &got, "bash", "-c", bin+" "+arg)
+		var exitErr *exec.ExitError
+		if !assert.True(t, errors.As(err, &exitErr)) {
+			return
+		}
+		assert.Equal(t, 1, exitErr.ExitCode())
+		assert.FileExists(t, out)
+		assert.Equal(t, `1c1
+< a
+---
+> b
+`, got.String())
+	})
 }
 
 func run(t *testing.T, stdout io.Writer, name string, arg ...string) error {

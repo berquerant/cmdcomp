@@ -177,6 +177,26 @@ func (r *runner) runCleanup(ctx context.Context) error {
 	return nil
 }
 
+func (r *runner) runStartups(ctx context.Context) error {
+	for i, p := range r.Startup {
+		logger := slog.With(slog.Int("count", i), slog.String("startup", p))
+		logger.Debug("start run startup")
+		cmd := exec.CommandContext(ctx, r.Shell, "-c", p)
+		cmd.Stdout = os.Stderr // startup stdout cannot be mixed with diff stdout
+		cmd.Stderr = os.Stderr
+		cmd.Env = r.cmdEnv(categoryCommon)
+		x := newCmdLog(cmd.Args)
+		err := cmd.Run()
+		x.close("", err)
+		r.logC <- x
+		if err != nil {
+			return fmt.Errorf("%w: run startup[%d]", err, i)
+		}
+		slog.Debug("end run startup")
+	}
+	return nil
+}
+
 func (r *runner) runInterceptors(ctx context.Context) error {
 	for i, p := range r.Interceptor {
 		logger := slog.With(slog.Int("count", i), slog.String("interceptor", p))
@@ -379,6 +399,10 @@ func (r *runner) run(ctx context.Context) (resultErr error) {
 		resultErr = errors.Join(err, cleanupErr)
 		_ = r.Close()
 	}()
+
+	if err = r.runStartups(ctx); err != nil {
+		return
+	}
 
 	result, err = r.runGenCmds(ctx)
 	if err != nil {
