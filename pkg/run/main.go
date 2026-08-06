@@ -157,12 +157,12 @@ func (r *runner) newShellCmd(arg ...string) *execx.Cmd {
 	return execx.NewCmd(r.TempDir, append([]string{r.Shell, "-c"}, arg...)...)
 }
 
-func (r *runner) runCleanup(ctx context.Context) error {
-	for i, p := range r.Cleanup {
-		logger := slog.With(slog.Int("count", i), slog.String("cleanup", p))
-		logger.Debug("start run cleanup")
+func (r *runner) runHooks(ctx context.Context, name string, cmds []string) error {
+	for i, p := range cmds {
+		logger := slog.With(slog.Int("count", i), slog.String(name, p))
+		logger.Debug(fmt.Sprintf("start run %s", name))
 		cmd := exec.CommandContext(ctx, r.Shell, "-c", p)
-		cmd.Stdout = os.Stderr // cleanup stdout cannot be mixed with diff stdout
+		cmd.Stdout = os.Stderr // stdout cannot be mixed with diff stdout
 		cmd.Stderr = os.Stderr
 		cmd.Env = r.cmdEnv(categoryCommon)
 		x := newCmdLog(cmd.Args)
@@ -170,51 +170,23 @@ func (r *runner) runCleanup(ctx context.Context) error {
 		x.close("", err)
 		r.logC <- x
 		if err != nil {
-			return fmt.Errorf("%w: run cleanup[%d]", err, i)
+			return fmt.Errorf("%w: run %s[%d]", err, name, i)
 		}
-		slog.Debug("end run cleanup")
+		logger.Debug(fmt.Sprintf("end run %s", name))
 	}
 	return nil
+}
+
+func (r *runner) runCleanup(ctx context.Context) error {
+	return r.runHooks(ctx, "cleanup", r.Cleanup)
 }
 
 func (r *runner) runStartups(ctx context.Context) error {
-	for i, p := range r.Startup {
-		logger := slog.With(slog.Int("count", i), slog.String("startup", p))
-		logger.Debug("start run startup")
-		cmd := exec.CommandContext(ctx, r.Shell, "-c", p)
-		cmd.Stdout = os.Stderr // startup stdout cannot be mixed with diff stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = r.cmdEnv(categoryCommon)
-		x := newCmdLog(cmd.Args)
-		err := cmd.Run()
-		x.close("", err)
-		r.logC <- x
-		if err != nil {
-			return fmt.Errorf("%w: run startup[%d]", err, i)
-		}
-		slog.Debug("end run startup")
-	}
-	return nil
+	return r.runHooks(ctx, "startup", r.Startup)
 }
 
 func (r *runner) runInterceptors(ctx context.Context) error {
-	for i, p := range r.Interceptor {
-		logger := slog.With(slog.Int("count", i), slog.String("interceptor", p))
-		logger.Debug("start run interceptor")
-		cmd := exec.CommandContext(ctx, r.Shell, "-c", p)
-		cmd.Stdout = os.Stderr // interceptor stdout cannot be mixed with diff stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = r.cmdEnv(categoryCommon)
-		x := newCmdLog(cmd.Args)
-		err := cmd.Run()
-		x.close("", err)
-		r.logC <- x
-		if err != nil {
-			return fmt.Errorf("%w: run interceptor[%d]", err, i)
-		}
-		slog.Debug("end run interceptor")
-	}
-	return nil
+	return r.runHooks(ctx, "interceptor", r.Interceptor)
 }
 
 func (r *runner) runLeftGenCmd(ctx context.Context) (string, error) {
