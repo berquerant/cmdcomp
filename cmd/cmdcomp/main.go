@@ -15,6 +15,9 @@ func main() {
 	if errors.Is(err, cli.ErrExit) {
 		return
 	}
+	if err != nil {
+		fail(err)
+	}
 
 	if err := run.Main(&c.Config); err != nil {
 		var exitErr *exec.ExitError
