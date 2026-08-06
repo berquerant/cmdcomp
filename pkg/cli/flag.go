@@ -60,7 +60,7 @@ in other words, succeed even if the diff command returns exit status 1`)
 	fs.StringArrayVar(&rightPreprocess, "rightPreprocess", nil,
 		"additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout",
 	)
-	fs.StringArrayVar(&env, "env", nil,
+	fs.StringArrayVarP(&env, "env", "e", nil,
 		`process environment variables;
 Passed to all processes along with os.Environ.
 --leftEnv is also passed to left output and left preprocess.
