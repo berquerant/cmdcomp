@@ -6,7 +6,8 @@ cmdcomp -- compare the output of two commands with optional preprocessing and cu
 ## Usage
 
 ```shell
-cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]```
+cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]
+```
 
 ## Examples
 
@@ -31,10 +32,11 @@ cmdcomp -x 'diff -u' -l -- echo -- a -- b
 # diff leftfile rightfile
 cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b
 
+# helm repo update
 # helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Secret")' > leftfile
 # helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Secret")' > rightfile
 # objdiff -c leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+cmdcomp --startup 'helm repo update' -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
 
 # helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > leftfile
 # helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > rightfile
@@ -78,6 +80,8 @@ presets:
     config:
       showCmdLog: true
       debug: true
+      startup:
+        - echo startup
       interceptor:
         - echo interceptor
       preprocess:
@@ -121,6 +125,13 @@ presets:
       delimiter: --
       cleanup:
         - git switch ${ORIG}
+  helm:
+    config:
+      startup:
+        - helm repo update
+      diff: objdiff -cv
+      shell: bash
+      delimiter: --
   json:
     config:
       preprocess:
@@ -201,6 +212,7 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
       --rightPreprocess stringArray   additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout
   -s, --shell string                  shell command to be executed (default "bash")
       --showCmdLog                    show command logs
+      --startup stringArray           process before running commands; invoked like 'startup'
       --success                       exit successfully even if there are diffs;
                                       in other words, succeed even if the diff command returns exit status 1
       --version                       display version

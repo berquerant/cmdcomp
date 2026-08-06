@@ -30,7 +30,8 @@ func (usageBuilder) code(lang, s string) string {
 func (u usageBuilder) usage() string {
 	return `## Usage
 
-` + u.code("shell", "cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]")
+` + u.code("shell", `cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]
+`)
 }
 
 func (u usageBuilder) examples() string {
@@ -56,10 +57,11 @@ cmdcomp -x 'diff -u' -l -- echo -- a -- b
 # diff leftfile rightfile
 cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b
 
+# helm repo update
 # helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Secret")' > leftfile
 # helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Secret")' > rightfile
 # objdiff -c leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+cmdcomp --startup 'helm repo update' -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
 
 # helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > leftfile
 # helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > rightfile

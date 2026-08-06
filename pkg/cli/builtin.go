@@ -30,6 +30,14 @@ func builtinConfigSet() *ConfigSet {
 					Diff: "objdiff -cv",
 				},
 			},
+			"helm": &Config{
+				Config: config.Config{
+					Diff: "objdiff -cv",
+					Startup: []string{
+						`helm repo update`,
+					},
+				},
+			},
 			"branch": &Config{
 				Config: config.Config{
 					Interceptor: []string{
