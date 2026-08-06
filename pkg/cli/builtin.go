@@ -38,6 +38,42 @@ func builtinConfigSet() *ConfigSet {
 					},
 				},
 			},
+			"helm-chart": &Config{
+				Config: config.Config{
+					Diff: "diff -u --color",
+					Startup: []string{
+						`helm repo update`,
+					},
+					Preprocess: []string{`yq -P 'sort_keys(..)'`},
+					CommonArgs: []string{
+						"helm", "show", "chart", "$CHART",
+					},
+					LeftArgs: []string{
+						"--version", "$LEFT",
+					},
+					RightArgs: []string{
+						"--version", "$RIGHT",
+					},
+				},
+			},
+			"helm-values": &Config{
+				Config: config.Config{
+					Diff: "diff -u --color",
+					Startup: []string{
+						`helm repo update`,
+					},
+					Preprocess: []string{`yq -P 'sort_keys(..)'`},
+					CommonArgs: []string{
+						"helm", "show", "values", "$CHART",
+					},
+					LeftArgs: []string{
+						"--version", "$LEFT",
+					},
+					RightArgs: []string{
+						"--version", "$RIGHT",
+					},
+				},
+			},
 		},
 	}
 	applyDefaultValuesToConfigSet(cs)
