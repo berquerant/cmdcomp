@@ -258,6 +258,27 @@ echo "${X}=${Y}"
 > b
 `, got.String())
 	})
+
+	t.Run("all lifecycle hooks order", func(t *testing.T) {
+		logFile := filepath.Join(t.TempDir(), "order.log")
+		arg := fmt.Sprintf(
+			`--startup 'echo 1_startup >> %[1]s' -i 'echo 3_interceptor >> %[1]s' --cleanup 'echo 5_cleanup >> %[1]s' -- bash -c -- 'echo 2_left >> %[1]s && echo same' -- 'echo 4_right >> %[1]s && echo same'`,
+			logFile,
+		)
+		var got bytes.Buffer
+		err := run(t, &got, "bash", "-c", bin+" "+arg)
+		assert.Nil(t, err)
+		assert.Equal(t, "", got.String())
+
+		outBytes, err := os.ReadFile(logFile)
+		assert.Nil(t, err)
+		assert.Equal(t, `1_startup
+2_left
+3_interceptor
+4_right
+5_cleanup
+`, string(outBytes))
+	})
 }
 
 func run(t *testing.T, stdout io.Writer, name string, arg ...string) error {

@@ -107,6 +107,43 @@ i2
 		assert.Nil(t, err)
 		assert.Equal(t, "", stdout.String())
 	})
+	t.Run("startup, interceptor, and cleanup order", func(t *testing.T) {
+		logFile := filepath.Join(t.TempDir(), "order.log")
+		var stdout bytes.Buffer
+		c := &config.Config{
+			Writer: &stdout,
+			Startup: []string{
+				"echo 1_startup >> " + logFile,
+			},
+			Interceptor: []string{
+				"echo 3_interceptor >> " + logFile,
+			},
+			Cleanup: []string{
+				"echo 5_cleanup >> " + logFile,
+			},
+			Diff:      "diff",
+			Shell:     "bash",
+			Delimiter: "--",
+			WorkDir:   t.TempDir(),
+			Debug:     true,
+		}
+		c.SetupLogger(os.Stderr)
+		assert.Nil(t, c.Init([]string{
+			"bash", "-c", "--", "echo 2_left >> " + logFile + " && echo same", "--", "echo 4_right >> " + logFile + " && echo same",
+		}))
+		err := run.Main(c)
+		assert.Nil(t, err)
+		assert.Equal(t, "", stdout.String())
+
+		outBytes, err := os.ReadFile(logFile)
+		assert.Nil(t, err)
+		assert.Equal(t, `1_startup
+2_left
+3_interceptor
+4_right
+5_cleanup
+`, string(outBytes))
+	})
 
 	for _, tc := range []struct {
 		title   string
