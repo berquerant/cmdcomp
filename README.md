@@ -192,7 +192,7 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
 
 ## Flags
 
-      --cleanup stringArray           process before exiting cmdcomp process; invoked like 'cleanup'
+  -c, --cleanup stringArray           process before exiting cmdcomp process; invoked like 'cleanup'
       --config string                 config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir
       --debug                         enable debug logs
   -d, --delimiter string              arguments delimiter;
@@ -210,9 +210,9 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
       --preset string                 name of preset to be used
       --rightEnv stringArray          right process environment variables
       --rightPreprocess stringArray   additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout
-  -s, --shell string                  shell command to be executed (default "bash")
+  -S, --shell string                  shell command to be executed (default "bash")
       --showCmdLog                    show command logs
-      --startup stringArray           process before running commands; invoked like 'startup'
+  -s, --startup stringArray           process before running commands; invoked like 'startup'
       --success                       exit successfully even if there are diffs;
                                       in other words, succeed even if the diff command returns exit status 1
       --version                       display version
