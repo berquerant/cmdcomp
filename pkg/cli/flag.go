@@ -29,7 +29,7 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		debug          = fs.Bool("debug", false, "enable debug logs")
 		showCmdLog     = fs.Bool("showCmdLog", false, "show command logs")
 		workDir        = fs.StringP("workDir", "w", "", "working directory; keep temporary files")
-		shell          = fs.StringP("shell", "s", "bash", "shell command to be executed")
+		shell          = fs.StringP("shell", "S", "bash", "shell command to be executed")
 		delimiter      = fs.StringP("delimiter", "d", "--", `arguments delimiter;
 change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this`)
 		success = fs.Bool("success", false, `exit successfully even if there are diffs;
@@ -44,12 +44,12 @@ in other words, succeed even if the diff command returns exit status 1`)
 		diff                                        string
 	)
 	// workaround: https://github.com/spf13/pflag/issues/370
-	fs.StringArrayVar(&startup, "startup", nil,
+	fs.StringArrayVarP(&startup, "startup", "s", nil,
 		"process before running commands; invoked like 'startup'")
 	fs.StringArrayVarP(&interceptor, "interceptor", "i", nil,
 		"process after left command and before right command; invoked like 'interceptor'",
 	)
-	fs.StringArrayVar(&cleanup, "cleanup", nil,
+	fs.StringArrayVarP(&cleanup, "cleanup", "c", nil,
 		"process before exiting cmdcomp process; invoked like 'cleanup'")
 	fs.StringArrayVarP(&preprocess, "preprocess", "p", nil,
 		"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout",
