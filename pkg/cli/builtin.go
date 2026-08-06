@@ -38,17 +38,6 @@ func builtinConfigSet() *ConfigSet {
 					},
 				},
 			},
-			"branch": &Config{
-				Config: config.Config{
-					Interceptor: []string{
-						`git switch ${RIGHT}`,
-					},
-					Cleanup: []string{
-						`git switch ${ORIG}`,
-					},
-					Diff: "diff -u --color",
-				},
-			},
 		},
 	}
 	applyDefaultValuesToConfigSet(cs)

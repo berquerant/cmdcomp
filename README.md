@@ -116,15 +116,6 @@ presets:
 
 ```yaml
 presets:
-  branch:
-    config:
-      interceptor:
-        - git switch ${RIGHT}
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
-      cleanup:
-        - git switch ${ORIG}
   helm:
     config:
       startup:
