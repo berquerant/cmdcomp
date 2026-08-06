@@ -18,6 +18,7 @@ var (
 type Config struct {
 	ShowCmdLog      bool     `yaml:"showCmdLog,omitempty"`
 	Debug           bool     `yaml:"debug,omitempty"`
+	Startup         []string `yaml:"startup,omitempty"`
 	Interceptor     []string `yaml:"interceptor,omitempty"`
 	Preprocess      []string `yaml:"preprocess,omitempty"`
 	LeftPreprocess  []string `yaml:"leftPreprocess,omitempty"`

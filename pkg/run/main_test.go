@@ -84,6 +84,66 @@ i2
 i2
 `, string(outBytes))
 	})
+	t.Run("startup", func(t *testing.T) {
+		out := filepath.Join(t.TempDir(), "output")
+		var stdout bytes.Buffer
+		c := &config.Config{
+			Writer: &stdout,
+			Startup: []string{
+				"echo s1 >> " + out,
+				"echo s2 >> " + out,
+			},
+			Diff:      "diff",
+			Shell:     "bash",
+			Delimiter: "--",
+			WorkDir:   t.TempDir(),
+			Debug:     true,
+		}
+		c.SetupLogger(os.Stderr)
+		assert.Nil(t, c.Init([]string{
+			"bash", "-c", "--", "cat " + out, "--", "printf 's1\\ns2\\n'",
+		}))
+		err := run.Main(c)
+		assert.Nil(t, err)
+		assert.Equal(t, "", stdout.String())
+	})
+	t.Run("startup, interceptor, and cleanup order", func(t *testing.T) {
+		logFile := filepath.Join(t.TempDir(), "order.log")
+		var stdout bytes.Buffer
+		c := &config.Config{
+			Writer: &stdout,
+			Startup: []string{
+				"echo 1_startup >> " + logFile,
+			},
+			Interceptor: []string{
+				"echo 3_interceptor >> " + logFile,
+			},
+			Cleanup: []string{
+				"echo 5_cleanup >> " + logFile,
+			},
+			Diff:      "diff",
+			Shell:     "bash",
+			Delimiter: "--",
+			WorkDir:   t.TempDir(),
+			Debug:     true,
+		}
+		c.SetupLogger(os.Stderr)
+		assert.Nil(t, c.Init([]string{
+			"bash", "-c", "--", "echo 2_left >> " + logFile + " && echo same", "--", "echo 4_right >> " + logFile + " && echo same",
+		}))
+		err := run.Main(c)
+		assert.Nil(t, err)
+		assert.Equal(t, "", stdout.String())
+
+		outBytes, err := os.ReadFile(logFile)
+		assert.Nil(t, err)
+		assert.Equal(t, `1_startup
+2_left
+3_interceptor
+4_right
+5_cleanup
+`, string(outBytes))
+	})
 
 	for _, tc := range []struct {
 		title   string
@@ -332,6 +392,19 @@ i2
 			},
 			args:   []string{"echo", "--", "a", "--", "a"},
 			errMsg: "preprocess",
+		},
+		{
+			title: "startup1 fail",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Startup: []string{
+					`exit 1`,
+				},
+			},
+			args:   []string{"echo", "--", "a", "--", "b"},
+			errMsg: "exit status 1: run startup[0]",
 		},
 		{
 			title: "interceptor1 fail",

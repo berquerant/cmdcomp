@@ -111,6 +111,9 @@ func newConfigExample() *ConfigSet {
 				Config: config.Config{
 					ShowCmdLog: true,
 					Debug:      true,
+					Startup: []string{
+						"echo startup",
+					},
 					Interceptor: []string{
 						"echo interceptor",
 					},
