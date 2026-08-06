@@ -123,6 +123,46 @@ presets:
       diff: objdiff -cv
       shell: bash
       delimiter: --
+  helm-chart:
+    config:
+      startup:
+        - helm repo update
+      preprocess:
+        - yq -P 'sort_keys(..)'
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+      commonArgs:
+        - helm
+        - show
+        - chart
+        - $CHART
+      leftArgs:
+        - --version
+        - $LEFT
+      rightArgs:
+        - --version
+        - $RIGHT
+  helm-values:
+    config:
+      startup:
+        - helm repo update
+      preprocess:
+        - yq -P 'sort_keys(..)'
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+      commonArgs:
+        - helm
+        - show
+        - values
+        - $CHART
+      leftArgs:
+        - --version
+        - $LEFT
+      rightArgs:
+        - --version
+        - $RIGHT
   json:
     config:
       preprocess:
@@ -189,7 +229,7 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
   -d, --delimiter string              arguments delimiter;
                                       change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
   -x, --diff string                   diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
-      --env stringArray               process environment variables;
+  -e, --env stringArray               process environment variables;
                                       Passed to all processes along with os.Environ.
                                       --leftEnv is also passed to left output and left preprocess.
                                       --rightEnv is also passed to right output and right preprocess.
