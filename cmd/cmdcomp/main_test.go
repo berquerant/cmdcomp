@@ -262,7 +262,7 @@ echo "${X}=${Y}"
 	t.Run("all lifecycle hooks order", func(t *testing.T) {
 		logFile := filepath.Join(t.TempDir(), "order.log")
 		arg := fmt.Sprintf(
-			`--startup 'echo 1_startup >> %[1]s' -i 'echo 3_interceptor >> %[1]s' --cleanup 'echo 5_cleanup >> %[1]s' -- bash -c -- 'echo 2_left >> %[1]s && echo same' -- 'echo 4_right >> %[1]s && echo same'`,
+			`-s 'echo 1_startup >> %[1]s' -i 'echo 3_interceptor >> %[1]s' -c 'echo 5_cleanup >> %[1]s' -- bash -c -- 'echo 2_left >> %[1]s && echo same' -- 'echo 4_right >> %[1]s && echo same'`,
 			logFile,
 		)
 		var got bytes.Buffer

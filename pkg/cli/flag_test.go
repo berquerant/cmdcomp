@@ -68,7 +68,7 @@ func TestParseConfig(t *testing.T) {
 		{
 			name: "startup",
 			args: []string{
-				"--startup", "echo s1",
+				"-s", "echo s1",
 				"--startup", "echo s2",
 				"--", "echo", "x",
 			},
@@ -81,6 +81,45 @@ func TestParseConfig(t *testing.T) {
 						"echo s1",
 						"echo s2",
 					},
+					CommonArgs: []string{
+						"echo", "x",
+					},
+				},
+			},
+		},
+		{
+			name: "cleanup",
+			args: []string{
+				"-c", "echo c1",
+				"--cleanup", "echo c2",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				Config: config.Config{
+					Diff:      "diff",
+					Delimiter: "--",
+					Shell:     "bash",
+					Cleanup: []string{
+						"echo c1",
+						"echo c2",
+					},
+					CommonArgs: []string{
+						"echo", "x",
+					},
+				},
+			},
+		},
+		{
+			name: "shell short flag",
+			args: []string{
+				"-S", "sh",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				Config: config.Config{
+					Diff:      "diff",
+					Delimiter: "--",
+					Shell:     "sh",
 					CommonArgs: []string{
 						"echo", "x",
 					},
