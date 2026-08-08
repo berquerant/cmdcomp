@@ -1,41 +1,15 @@
-package cli
+cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
 
-import (
-	"bytes"
-	"fmt"
-	"strings"
-	"text/template"
+## Usage
 
-	"github.com/goccy/go-yaml"
-)
+```shell
+cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]
+```
 
-type UsageBuilder struct{}
+## Examples
 
-type usageTemplateData struct {
-	UsageCode          string
-	ExamplesCode       string
-	ConfigFormatCode   string
-	BuiltinConfigCode  string
-	ConfigUsageCode    string
-	ConfigExamplesCode string
-	SentryShellCode    string
-}
-
-func (UsageBuilder) code(lang, s string) string {
-	return fmt.Sprintf("```%s\n%s```", lang, strings.TrimRight(s, "\n")+"\n")
-}
-
-func (UsageBuilder) marshalYaml(v any) string {
-	b, _ := yaml.MarshalWithOptions(v, yaml.Indent(2), yaml.IndentSequence(true))
-	return string(b)
-}
-
-func (u UsageBuilder) usageCode() string {
-	return u.code("shell", `cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]`)
-}
-
-func (u UsageBuilder) examplesCode() string {
-	return u.code("shell", `# echo a > leftfile
+```shell
+# echo a > leftfile
 # echo b > rightfile
 # diff leftfile rightfile
 cmdcomp -- echo -- a -- b
@@ -90,93 +64,159 @@ cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
 # helm show values datadog/datadog --version 3.69.3 | yq -o json | gron > leftfile
 # helm show values datadog/datadog --version 3.164.1 | yq -o json | gron > rightfile
 # diff -u --color leftfile rightfile
-cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datadog/datadog --version -- 3.69.3 -- 3.164.1`)
-}
-
-func (u UsageBuilder) configFormatCode() string {
-	return u.code("yaml", u.marshalYaml(newConfigExample()))
-}
-
-func (u UsageBuilder) builtinConfigCode() string {
-	return u.code("yaml", u.marshalYaml(builtinConfigSet()))
-}
-
-func (u UsageBuilder) configUsageCode() string {
-	return u.code("shell", `# use "example" preset
-# overriding "diff" option
-cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
-
-# use builtin "json" preset
-cmdcomp --preset json -- ...`)
-}
-
-func (u UsageBuilder) configExamplesCode() string {
-	return u.code("yaml", `presets:
-  sentry:
-    config:
-      diff: objdiff -cv
-      commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]`)
-}
-
-func (u UsageBuilder) sentryShellCode() string {
-	return u.code("shell", `# helm template sentry/sentry --version 28.0.3 > leftfile
-# helm template sentry/sentry --version 29.5.1 > rightfile
-# objdiff -cv leftfile rightfile
-cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'`)
-}
-
-var rawUsageTemplate = `cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
-
-## Usage
-
-{{.UsageCode}}
-
-## Examples
-
-{{.ExamplesCode}}
+cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datadog/datadog --version -- 3.69.3 -- 3.164.1
+```
 
 ## Config file
 
 ### Format
 
-{{.ConfigFormatCode}}
+```yaml
+presets:
+  example:
+    config:
+      showCmdLog: true
+      debug: true
+      startup:
+        - echo startup
+      interceptor:
+        - echo interceptor
+      preprocess:
+        - grep common
+      leftPreprocess:
+        - grep left
+      rightPreprocess:
+        - grep right
+      diff: diff
+      workDir: workdir
+      shell: bash
+      delimiter: --
+      label: true
+      env:
+        - X=1
+      leftEnv:
+        - Y=2
+      rightEnv:
+        - Y=3
+      cleanup:
+        - echo cleanup
+      commonArgs:
+        - echo
+      leftArgs:
+        - common left
+      rightArgs:
+        - common right
+    success: true
+```
 
 ### Builtin config
 
-{{.BuiltinConfigCode}}
+```yaml
+presets:
+  helm:
+    config:
+      startup:
+        - helm repo update
+      diff: objdiff -cv
+      shell: bash
+      delimiter: --
+  helm-chart:
+    config:
+      startup:
+        - helm repo update
+      preprocess:
+        - yq -P 'sort_keys(..)'
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+      commonArgs:
+        - helm
+        - show
+        - chart
+        - $CHART
+      leftArgs:
+        - --version
+        - $LEFT
+      rightArgs:
+        - --version
+        - $RIGHT
+  helm-values:
+    config:
+      startup:
+        - helm repo update
+      preprocess:
+        - yq -P 'sort_keys(..)'
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+      commonArgs:
+        - helm
+        - show
+        - values
+        - $CHART
+      leftArgs:
+        - --version
+        - $LEFT
+      rightArgs:
+        - --version
+        - $RIGHT
+  json:
+    config:
+      preprocess:
+        - jq -S .
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+  k8s:
+    config:
+      diff: objdiff -cv
+      shell: bash
+      delimiter: --
+  k8s-clean:
+    config:
+      preprocess:
+        - yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'
+      diff: objdiff -cv
+      shell: bash
+      delimiter: --
+  yml:
+    config:
+      preprocess:
+        - yq -P 'sort_keys(..)'
+      diff: diff -u --color
+      shell: bash
+      delimiter: --
+```
 
 ### Usage
 
-{{.ConfigUsageCode}}
+```shell
+# use "example" preset
+# overriding "diff" option
+cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
+
+# use builtin "json" preset
+cmdcomp --preset json -- ...
+```
 
 ### Examples
 
-{{.ConfigExamplesCode}}
+```yaml
+presets:
+  sentry:
+    config:
+      diff: objdiff -cv
+      commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
+```
 
 then
 
-{{.SentryShellCode}}
+```shell
+# helm template sentry/sentry --version 28.0.3 > leftfile
+# helm template sentry/sentry --version 29.5.1 > rightfile
+# objdiff -cv leftfile rightfile
+cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'
+```
 
 ## Flags
 
-`
-
-var parsedUsageTemplate = template.Must(template.New("usage").Parse(rawUsageTemplate))
-
-func (u UsageBuilder) Build() string {
-	data := usageTemplateData{
-		UsageCode:          u.usageCode(),
-		ExamplesCode:       u.examplesCode(),
-		ConfigFormatCode:   u.configFormatCode(),
-		BuiltinConfigCode:  u.builtinConfigCode(),
-		ConfigUsageCode:    u.configUsageCode(),
-		ConfigExamplesCode: u.configExamplesCode(),
-		SentryShellCode:    u.sentryShellCode(),
-	}
-
-	var buf bytes.Buffer
-	if err := parsedUsageTemplate.Execute(&buf, data); err != nil {
-		panic(err)
-	}
-	return buf.String()
-}

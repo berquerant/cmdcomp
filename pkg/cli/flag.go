@@ -19,8 +19,8 @@ var (
 func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 	fs := pflag.NewFlagSet("main", pflag.ContinueOnError)
 	fs.Usage = func() {
-		var b usageBuilder
-		fmt.Fprint(stderr, b.build())
+		var b UsageBuilder
+		fmt.Fprint(stderr, b.Build())
 		fs.PrintDefaults()
 	}
 
