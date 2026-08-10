@@ -74,6 +74,11 @@ func builtinConfigSet() *ConfigSet {
 					},
 				},
 			},
+			"dyff": &Config{
+				Config: config.Config{
+					Diff: "dyff between --omit-header --set-exit-code",
+				},
+			},
 		},
 	}
 	applyDefaultValuesToConfigSet(cs)

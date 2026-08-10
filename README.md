@@ -116,6 +116,11 @@ presets:
 
 ```yaml
 presets:
+  dyff:
+    config:
+      diff: dyff between --omit-header --set-exit-code
+      shell: bash
+      delimiter: --
   helm:
     config:
       startup:
