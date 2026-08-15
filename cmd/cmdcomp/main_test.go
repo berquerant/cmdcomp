@@ -334,6 +334,66 @@ echo "${X}=${Y}"
 				// dryrun generates a script; running that script should produce actual diff
 				arg: `--dryrun -- echo -- a -- b`,
 			},
+			// ---- multiple hooks / preprocesses / interceptors ----
+			{
+				title: "multiple startup hooks all appear with correct indices",
+				arg:   `--dryrun -s 'echo s0' -s 'echo s1' -s 'echo s2' -- echo -- a -- b`,
+				contains: []string{
+					"# startup[0]", "echo s0",
+					"# startup[1]", "echo s1",
+					"# startup[2]", "echo s2",
+				},
+			},
+			{
+				title: "multiple cleanup hooks all appear with correct indices",
+				arg:   `--dryrun -c 'echo c0' -c 'echo c1' -c 'echo c2' -- echo -- a -- b`,
+				contains: []string{
+					"# cleanup[0]", "echo c0",
+					"# cleanup[1]", "echo c1",
+					"# cleanup[2]", "echo c2",
+				},
+			},
+			{
+				title: "multiple interceptors all appear with correct indices",
+				arg:   `--dryrun -i 'echo i0' -i 'echo i1' -i 'echo i2' -- echo -- a -- b`,
+				contains: []string{
+					"# interceptor[0]", "echo i0",
+					"# interceptor[1]", "echo i1",
+					"# interceptor[2]", "echo i2",
+				},
+			},
+			{
+				title: "multiple preprocess commands form a pipeline",
+				arg:   `--dryrun -p 'sed "s|a|x|"' -p 'sed "s|x|y|"' -p cat -- echo -- a -- b`,
+				contains: []string{
+					"# preprocess:left",
+					`sed "s|a|x|"`,
+					`| sed "s|x|y|"`,
+					"| cat",
+				},
+			},
+			{
+				title: "leftPreprocess and rightPreprocess independently",
+				arg:   `--dryrun --leftPreprocess 'tr a A' --leftPreprocess 'tr A Z' --rightPreprocess 'tr b B' -- echo -- a -- b`,
+				contains: []string{
+					"# preprocess:left", "tr a A", "| tr A Z",
+					"# preprocess:right", "tr b B",
+				},
+			},
+			{
+				title: "all hooks and preprocesses combined",
+				arg:   `--dryrun -s 'echo s0' -s 'echo s1' -i 'echo i0' -i 'echo i1' -c 'echo c0' -p 'cat' --leftPreprocess 'tr a L' --rightPreprocess 'tr b R' -- echo -- a -- b`,
+				contains: []string{
+					"# startup[0]", "echo s0",
+					"# startup[1]", "echo s1",
+					"# interceptor[0]", "echo i0",
+					"# interceptor[1]", "echo i1",
+					"# cleanup[0]", "echo c0",
+					"# preprocess:left", "tr a L",
+					"# preprocess:right", "tr b R",
+					"# diff",
+				},
+			},
 		} {
 			t.Run(tc.title, func(t *testing.T) {
 				var got bytes.Buffer

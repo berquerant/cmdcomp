@@ -163,6 +163,136 @@ func TestDryRun(t *testing.T) {
 				`"$_CMDCOMP_PREPROCESS_RIGHT"`,
 			},
 		},
+		// ---- multiple hooks / preprocesses / interceptors ----
+		{
+			name: "multiple startup hooks all appear in index order",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.Startup = []string{"echo s0", "echo s1", "echo s2"}
+			},
+			contains: []string{
+				"# startup[0]", "echo s0",
+				"# startup[1]", "echo s1",
+				"# startup[2]", "echo s2",
+			},
+			order: [][2]string{
+				{"# startup[0]", "# startup[1]"},
+				{"# startup[1]", "# startup[2]"},
+				{"# startup[2]", "# left"},
+			},
+		},
+		{
+			name: "multiple cleanup hooks all appear in index order after diff",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.Cleanup = []string{"echo c0", "echo c1", "echo c2"}
+			},
+			contains: []string{
+				"# cleanup[0]", "echo c0",
+				"# cleanup[1]", "echo c1",
+				"# cleanup[2]", "echo c2",
+			},
+			order: [][2]string{
+				{"# diff", "# cleanup[0]"},
+				{"# cleanup[0]", "# cleanup[1]"},
+				{"# cleanup[1]", "# cleanup[2]"},
+			},
+		},
+		{
+			name: "multiple interceptors all appear between left and right",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.Interceptor = []string{"echo i0", "echo i1", "echo i2"}
+			},
+			contains: []string{
+				"# interceptor[0]", "echo i0",
+				"# interceptor[1]", "echo i1",
+				"# interceptor[2]", "echo i2",
+			},
+			order: [][2]string{
+				{"# left", "# interceptor[0]"},
+				{"# interceptor[0]", "# interceptor[1]"},
+				{"# interceptor[1]", "# interceptor[2]"},
+				{"# interceptor[2]", "# right"},
+			},
+		},
+		{
+			name: "multiple preprocess commands form a single pipeline per side",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.Preprocess = []string{`sed 's|a|x|'`, `sed 's|x|y|'`, "cat"}
+			},
+			contains: []string{
+				`sed 's|a|x|'`,
+				`| sed 's|x|y|'`,
+				"| cat",
+				// all three commands appear on one pipeline line per side
+				"# preprocess:left",
+				"# preprocess:right",
+			},
+		},
+		{
+			name: "independent leftPreprocess and rightPreprocess pipelines",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.LeftPreprocess = []string{"tr a A", "tr A Z"}
+				c.RightPreprocess = []string{"tr b B", "tr B Y"}
+			},
+			contains: []string{
+				// left pipeline
+				"# preprocess:left", "tr a A", "| tr A Z",
+				// right pipeline
+				"# preprocess:right", "tr b B", "| tr B Y",
+			},
+		},
+		{
+			name: "common preprocess prepended before side-specific preprocess",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.Preprocess = []string{"cat"}
+				c.LeftPreprocess = []string{"tr a A"}
+				c.RightPreprocess = []string{"tr b B"}
+			},
+			contains: []string{
+				// left: common then left-specific
+				"# preprocess:left",
+				"cat < \"$_CMDCOMP_LEFT\" | tr a A",
+				// right: common then right-specific
+				"# preprocess:right",
+				"cat < \"$_CMDCOMP_RIGHT\" | tr b B",
+			},
+		},
+		{
+			name: "all hooks and preprocesses combined",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.Startup = []string{"echo s0", "echo s1"}
+				c.Interceptor = []string{"echo i0", "echo i1"}
+				c.Cleanup = []string{"echo c0", "echo c1"}
+				c.Preprocess = []string{`sed 's|a|x|'`}
+				c.LeftPreprocess = []string{"tr x L"}
+				c.RightPreprocess = []string{"tr x R"}
+			},
+			contains: []string{
+				"# startup[0]", "echo s0",
+				"# startup[1]", "echo s1",
+				"# left",
+				"# interceptor[0]", "echo i0",
+				"# interceptor[1]", "echo i1",
+				"# right",
+				"# preprocess:left", "tr x L",
+				"# preprocess:right", "tr x R",
+				"# diff",
+				"# cleanup[0]", "echo c0",
+				"# cleanup[1]", "echo c1",
+			},
+			order: [][2]string{
+				{"# startup[1]", "# left"},
+				{"# left", "# interceptor[0]"},
+				{"# interceptor[1]", "# right"},
+				{"# diff", "# cleanup[0]"},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			modify := tc.modify
