@@ -13,6 +13,48 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type e2eTestCase struct {
+	title      string
+	arg        string // flags and arguments passed to bin (e.g. "-x 'diff -u' -- echo -- a -- b")
+	want       string
+	wantStatus int
+	skipDryrun bool // set to true if the dryrun script cannot be executed directly (e.g., nested cmdcomp)
+}
+
+func (tc e2eTestCase) run(t *testing.T, bin string) {
+	t.Run(tc.title, func(t *testing.T) {
+		t.Run("direct", func(t *testing.T) {
+			var got bytes.Buffer
+			err := run(t, &got, "bash", "-c", bin+" "+tc.arg)
+			if tc.wantStatus == 0 {
+				assert.Nil(t, err)
+			} else {
+				var exitErr *exec.ExitError
+				if !assert.True(t, errors.As(err, &exitErr)) {
+					return
+				}
+				assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
+			}
+			assert.Equal(t, tc.want, got.String())
+		})
+
+		if !tc.skipDryrun {
+			t.Run("dryrun", func(t *testing.T) {
+				var script bytes.Buffer
+				if !assert.Nil(t, run(t, &script, "bash", "-c", bin+" --dryrun "+tc.arg), "dryrun must exit 0") {
+					return
+				}
+				var got bytes.Buffer
+				cmd := exec.Command("bash", "-c", script.String())
+				cmd.Stdout = &got
+				cmd.Stderr = os.Stderr
+				_ = cmd.Run() // ignore exit code; only stdout content is compared
+				assert.Equal(t, tc.want, got.String())
+			})
+		}
+	})
+}
+
 func TestE2E(t *testing.T) {
 	if !assert.Nil(t, run(t, os.Stdout, "make"), "should build successfully") {
 		return
@@ -25,15 +67,10 @@ func TestE2E(t *testing.T) {
 	})
 
 	t.Run("delimiter", func(t *testing.T) {
-		for _, tc := range []struct {
-			title      string
-			arg        string
-			want       string
-			wantStatus int
-		}{
+		for _, tc := range []e2eTestCase{
 			{
 				title: "changed",
-				arg:   bin + ` -d '---' -- echo --- echo -- a --- echo -- b`,
+				arg:   `-d '---' -- echo --- echo -- a --- echo -- b`,
 				want: `1c1
 < echo -- a
 ---
@@ -43,29 +80,17 @@ func TestE2E(t *testing.T) {
 			},
 			{
 				title: "cmdcomp",
-				arg:   fmt.Sprintf(`%[1]s -d '---' -- %[1]s --success -- echo -- a -- --- b --- c`, bin),
+				arg:   fmt.Sprintf(`-d '---' -- %[1]s --success -- echo -- a -- --- b --- c`, bin),
 				want: `4c4
 < > b
 ---
 > > c
 `,
 				wantStatus: 1,
+				skipDryrun: true,
 			},
 		} {
-			t.Run(tc.title, func(t *testing.T) {
-				var got bytes.Buffer
-				err := run(t, &got, "bash", "-c", tc.arg)
-				if tc.wantStatus == 0 {
-					assert.Nil(t, err)
-				} else {
-					var exitErr *exec.ExitError
-					if !assert.True(t, errors.As(err, &exitErr)) {
-						return
-					}
-					assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
-				}
-				assert.Equal(t, tc.want, got.String())
-			})
+			tc.run(t, bin)
 		}
 	})
 
@@ -76,12 +101,7 @@ echo "${X}=${Y}"
 		return
 	}
 
-	for _, tc := range []struct {
-		title      string
-		arg        string
-		want       string
-		wantStatus int
-	}{
+	for _, tc := range []e2eTestCase{
 		{
 			title: "pass args to echo",
 			arg:   "-- echo -- --debug a -- a",
@@ -180,20 +200,7 @@ echo "${X}=${Y}"
 			wantStatus: 1,
 		},
 	} {
-		t.Run(tc.title, func(t *testing.T) {
-			var got bytes.Buffer
-			err := run(t, &got, "bash", "-c", bin+" "+tc.arg)
-			if tc.wantStatus == 0 {
-				assert.Nil(t, err)
-			} else {
-				var exitErr *exec.ExitError
-				if !assert.True(t, errors.As(err, &exitErr)) {
-					return
-				}
-				assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
-			}
-			assert.Equal(t, tc.want, got.String())
-		})
+		tc.run(t, bin)
 	}
 
 	t.Run("cleanup", func(t *testing.T) {
@@ -278,6 +285,154 @@ echo "${X}=${Y}"
 4_right
 5_cleanup
 `, string(outBytes))
+	})
+
+	t.Run("dryrun", func(t *testing.T) {
+		for _, tc := range []struct {
+			title    string
+			arg      string
+			contains []string
+		}{
+			{
+				title: "exits zero and outputs shebang",
+				arg:   "--dryrun -- echo -- a -- b",
+				contains: []string{
+					"#!/usr/bin/env bash",
+					"set -euo pipefail",
+					"_CMDCOMP_TMPDIR=$(mktemp -d)",
+					"# left",
+					"echo a",
+					"# right",
+					"echo b",
+					"# diff",
+					"diff ",
+				},
+			},
+			{
+				title: "custom diff and preprocess appear in script",
+				arg:   `--dryrun -x 'diff -u' -p 'sed "s|a|c|"' -- echo -- a -- b`,
+				contains: []string{
+					"diff -u",
+					`sed "s|a|c|"`,
+					"# preprocess:left",
+					"# preprocess:right",
+				},
+			},
+			{
+				title: "startup and cleanup hooks appear in script",
+				arg:   `--dryrun -s 'echo startup1' -c 'echo cleanup1' -- echo -- a -- b`,
+				contains: []string{
+					"# startup[0]",
+					"echo startup1",
+					"# cleanup[0]",
+					"echo cleanup1",
+				},
+			},
+			{
+				title: "interceptor appears in script",
+				arg:   `--dryrun -i 'echo interceptor1' -- echo -- a -- b`,
+				contains: []string{
+					"# interceptor[0]",
+					"echo interceptor1",
+				},
+			},
+			{
+				title: "generated script is executable and produces diff output",
+				// dryrun generates a script; running that script should produce actual diff
+				arg: `--dryrun -- echo -- a -- b`,
+			},
+			// ---- multiple hooks / preprocesses / interceptors ----
+			{
+				title: "multiple startup hooks all appear with correct indices",
+				arg:   `--dryrun -s 'echo s0' -s 'echo s1' -s 'echo s2' -- echo -- a -- b`,
+				contains: []string{
+					"# startup[0]", "echo s0",
+					"# startup[1]", "echo s1",
+					"# startup[2]", "echo s2",
+				},
+			},
+			{
+				title: "multiple cleanup hooks all appear with correct indices",
+				arg:   `--dryrun -c 'echo c0' -c 'echo c1' -c 'echo c2' -- echo -- a -- b`,
+				contains: []string{
+					"# cleanup[0]", "echo c0",
+					"# cleanup[1]", "echo c1",
+					"# cleanup[2]", "echo c2",
+				},
+			},
+			{
+				title: "multiple interceptors all appear with correct indices",
+				arg:   `--dryrun -i 'echo i0' -i 'echo i1' -i 'echo i2' -- echo -- a -- b`,
+				contains: []string{
+					"# interceptor[0]", "echo i0",
+					"# interceptor[1]", "echo i1",
+					"# interceptor[2]", "echo i2",
+				},
+			},
+			{
+				title: "multiple preprocess commands form a pipeline",
+				arg:   `--dryrun -p 'sed "s|a|x|"' -p 'sed "s|x|y|"' -p cat -- echo -- a -- b`,
+				contains: []string{
+					"# preprocess:left",
+					`sed "s|a|x|"`,
+					`| sed "s|x|y|"`,
+					"| cat",
+				},
+			},
+			{
+				title: "leftPreprocess and rightPreprocess independently",
+				arg:   `--dryrun --leftPreprocess 'tr a A' --leftPreprocess 'tr A Z' --rightPreprocess 'tr b B' -- echo -- a -- b`,
+				contains: []string{
+					"# preprocess:left", "tr a A", "| tr A Z",
+					"# preprocess:right", "tr b B",
+				},
+			},
+			{
+				title: "all hooks and preprocesses combined",
+				arg:   `--dryrun -s 'echo s0' -s 'echo s1' -i 'echo i0' -i 'echo i1' -c 'echo c0' -p 'cat' --leftPreprocess 'tr a L' --rightPreprocess 'tr b R' -- echo -- a -- b`,
+				contains: []string{
+					"# startup[0]", "echo s0",
+					"# startup[1]", "echo s1",
+					"# interceptor[0]", "echo i0",
+					"# interceptor[1]", "echo i1",
+					"# cleanup[0]", "echo c0",
+					"# preprocess:left", "tr a L",
+					"# preprocess:right", "tr b R",
+					"# diff",
+				},
+			},
+		} {
+			t.Run(tc.title, func(t *testing.T) {
+				var got bytes.Buffer
+				err := run(t, &got, "bash", "-c", bin+" "+tc.arg)
+				// dryrun must always exit 0
+				assert.Nil(t, err)
+				out := got.String()
+				for _, want := range tc.contains {
+					assert.Contains(t, out, want)
+				}
+			})
+		}
+
+		t.Run("generated script produces real diff when executed", func(t *testing.T) {
+			// Capture the dry-run script, then run it with bash and verify it produces diff output.
+			var script bytes.Buffer
+			err := run(t, &script, "bash", "-c", bin+" --dryrun -- echo -- a -- b")
+			if !assert.Nil(t, err) {
+				return
+			}
+			var diffOut bytes.Buffer
+			cmd := exec.Command("bash", "-c", script.String())
+			cmd.Stdout = &diffOut
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			// diff exits 1 when files differ
+			var exitErr *exec.ExitError
+			if assert.True(t, errors.As(err, &exitErr)) {
+				assert.Equal(t, 1, exitErr.ExitCode())
+			}
+			assert.Equal(t, "1c1\n< a\n---\n> b\n", diffOut.String())
+		})
 	})
 }
 

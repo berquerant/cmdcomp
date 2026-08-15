@@ -234,6 +234,7 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
   -d, --delimiter string              arguments delimiter;
                                       change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
   -x, --diff string                   diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
+      --dryrun                        print the shell commands that would be executed, then exit without running them
   -e, --env stringArray               process environment variables;
                                       Passed to all processes along with os.Environ.
                                       --leftEnv is also passed to left output and left preprocess.
