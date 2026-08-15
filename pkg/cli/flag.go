@@ -28,6 +28,7 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		displayVersion = fs.Bool("version", false, "display version")
 		debug          = fs.Bool("debug", false, "enable debug logs")
 		showCmdLog     = fs.Bool("showCmdLog", false, "show command logs")
+		dryRun         = fs.Bool("dryrun", false, "print the shell commands that would be executed, then exit without running them")
 		workDir        = fs.StringP("workDir", "w", "", "working directory; keep temporary files")
 		shell          = fs.StringP("shell", "S", "bash", "shell command to be executed")
 		delimiter      = fs.StringP("delimiter", "d", "--", `arguments delimiter;
@@ -109,6 +110,8 @@ Passed to all processes along with os.Environ.
 			c.Debug = *debug
 		case "showCmdLog":
 			c.ShowCmdLog = *showCmdLog
+		case "dryrun":
+			c.DryRun = *dryRun
 		case "workDir":
 			c.WorkDir = *workDir
 		case "shell":

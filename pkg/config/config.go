@@ -18,6 +18,7 @@ var (
 type Config struct {
 	ShowCmdLog      bool     `yaml:"showCmdLog,omitempty"`
 	Debug           bool     `yaml:"debug,omitempty"`
+	DryRun          bool     `yaml:"dryrun,omitempty"`
 	Startup         []string `yaml:"startup,omitempty"`
 	Interceptor     []string `yaml:"interceptor,omitempty"`
 	Preprocess      []string `yaml:"preprocess,omitempty"`
@@ -52,13 +53,16 @@ func (c *Config) Init(args []string) error {
 }
 
 func (c *Config) Close() error {
-	if c.WorkDir == "" {
-		return os.RemoveAll(c.TempDir)
+	if c.DryRun || c.WorkDir != "" {
+		return nil
 	}
-	return nil
+	return os.RemoveAll(c.TempDir)
 }
 
 func (c *Config) setTempDir() error {
+	if c.DryRun {
+		return nil // no temp directory needed for dry-run
+	}
 	if d := c.WorkDir; d != "" {
 		c.TempDir = d
 		return nil
