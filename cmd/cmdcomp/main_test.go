@@ -8,11 +8,52 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+type e2eTestCase struct {
+	title      string
+	arg        string // flags and arguments passed to bin (e.g. "-x 'diff -u' -- echo -- a -- b")
+	want       string
+	wantStatus int
+	skipDryrun bool // set to true if the dryrun script cannot be executed directly (e.g., nested cmdcomp)
+}
+
+func (tc e2eTestCase) run(t *testing.T, bin string) {
+	t.Run(tc.title, func(t *testing.T) {
+		t.Run("direct", func(t *testing.T) {
+			var got bytes.Buffer
+			err := run(t, &got, "bash", "-c", bin+" "+tc.arg)
+			if tc.wantStatus == 0 {
+				assert.Nil(t, err)
+			} else {
+				var exitErr *exec.ExitError
+				if !assert.True(t, errors.As(err, &exitErr)) {
+					return
+				}
+				assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
+			}
+			assert.Equal(t, tc.want, got.String())
+		})
+
+		if !tc.skipDryrun {
+			t.Run("dryrun", func(t *testing.T) {
+				var script bytes.Buffer
+				if !assert.Nil(t, run(t, &script, "bash", "-c", bin+" --dryrun "+tc.arg), "dryrun must exit 0") {
+					return
+				}
+				var got bytes.Buffer
+				cmd := exec.Command("bash", "-c", script.String())
+				cmd.Stdout = &got
+				cmd.Stderr = os.Stderr
+				_ = cmd.Run() // ignore exit code; only stdout content is compared
+				assert.Equal(t, tc.want, got.String())
+			})
+		}
+	})
+}
 
 func TestE2E(t *testing.T) {
 	if !assert.Nil(t, run(t, os.Stdout, "make"), "should build successfully") {
@@ -26,18 +67,10 @@ func TestE2E(t *testing.T) {
 	})
 
 	t.Run("delimiter", func(t *testing.T) {
-		delimCases := []struct {
-			title      string
-			arg        string // full bash command (includes bin)
-			want       string
-			wantStatus int
-			// skipDryrun marks cases where the generated script cannot be
-			// executed standalone (e.g. it calls bin itself as a subprocess).
-			skipDryrun bool
-		}{
+		for _, tc := range []e2eTestCase{
 			{
 				title: "changed",
-				arg:   bin + ` -d '---' -- echo --- echo -- a --- echo -- b`,
+				arg:   `-d '---' -- echo --- echo -- a --- echo -- b`,
 				want: `1c1
 < echo -- a
 ---
@@ -47,59 +80,18 @@ func TestE2E(t *testing.T) {
 			},
 			{
 				title: "cmdcomp",
-				arg:  fmt.Sprintf(`%[1]s -d '---' -- %[1]s --success -- echo -- a -- --- b --- c`, bin),
+				arg:   fmt.Sprintf(`-d '---' -- %[1]s --success -- echo -- a -- --- b --- c`, bin),
 				want: `4c4
 < > b
 ---
 > > c
 `,
 				wantStatus: 1,
-				// The generated script would invoke bin as a subprocess; skip
-				// because bin may not be in PATH when the script is executed.
 				skipDryrun: true,
 			},
+		} {
+			tc.run(t, bin)
 		}
-
-		for _, tc := range delimCases {
-			t.Run(tc.title, func(t *testing.T) {
-				var got bytes.Buffer
-				err := run(t, &got, "bash", "-c", tc.arg)
-				if tc.wantStatus == 0 {
-					assert.Nil(t, err)
-				} else {
-					var exitErr *exec.ExitError
-					if !assert.True(t, errors.As(err, &exitErr)) {
-						return
-					}
-					assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
-				}
-				assert.Equal(t, tc.want, got.String())
-			})
-		}
-
-		// For each non-skipped delimiter case, verify that the dry-run script,
-		// when executed with bash, produces the same stdout as the direct run.
-		t.Run("dryrun script equivalence", func(t *testing.T) {
-			for _, tc := range delimCases {
-				if tc.skipDryrun {
-					continue
-				}
-				t.Run(tc.title, func(t *testing.T) {
-					// Insert --dryrun immediately after the binary name in the arg.
-					dryrunArg := strings.Replace(tc.arg, bin+" ", bin+" --dryrun ", 1)
-					var script bytes.Buffer
-					if !assert.Nil(t, run(t, &script, "bash", "-c", dryrunArg), "dryrun must exit 0") {
-						return
-					}
-					var got bytes.Buffer
-					cmd := exec.Command("bash", "-c", script.String())
-					cmd.Stdout = &got
-					cmd.Stderr = os.Stderr
-					_ = cmd.Run() // ignore exit code; only stdout content is compared
-					assert.Equal(t, tc.want, got.String())
-				})
-			}
-		})
 	})
 
 	envEcho := filepath.Join(t.TempDir(), "envecho.sh")
@@ -109,15 +101,7 @@ echo "${X}=${Y}"
 		return
 	}
 
-	// generalCases is the single source of truth for all non-side-effect test scenarios.
-	// The same slice is consumed by both the direct-execution loop and the
-	// dry-run script equivalence loop, so new cases are covered by both automatically.
-	generalCases := []struct {
-		title      string
-		arg        string // flags and positional args only (bin is NOT included)
-		want       string
-		wantStatus int
-	}{
+	for _, tc := range []e2eTestCase{
 		{
 			title: "pass args to echo",
 			arg:   "-- echo -- --debug a -- a",
@@ -215,46 +199,9 @@ echo "${X}=${Y}"
 `,
 			wantStatus: 1,
 		},
+	} {
+		tc.run(t, bin)
 	}
-
-	// Direct-execution loop: same behaviour as before.
-	for _, tc := range generalCases {
-		t.Run(tc.title, func(t *testing.T) {
-			var got bytes.Buffer
-			err := run(t, &got, "bash", "-c", bin+" "+tc.arg)
-			if tc.wantStatus == 0 {
-				assert.Nil(t, err)
-			} else {
-				var exitErr *exec.ExitError
-				if !assert.True(t, errors.As(err, &exitErr)) {
-					return
-				}
-				assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
-			}
-			assert.Equal(t, tc.want, got.String())
-		})
-	}
-
-	// Dry-run script equivalence loop: for every case in generalCases, verify that
-	// the script emitted by --dryrun, when executed with bash, produces the same
-	// stdout as the direct run. Exit code of the script is intentionally ignored
-	// because --success only affects cmdcomp's own exit code, not diff's.
-	t.Run("dryrun script equivalence", func(t *testing.T) {
-		for _, tc := range generalCases {
-			t.Run(tc.title, func(t *testing.T) {
-				var script bytes.Buffer
-				if !assert.Nil(t, run(t, &script, "bash", "-c", bin+" --dryrun "+tc.arg), "dryrun must exit 0") {
-					return
-				}
-				var got bytes.Buffer
-				cmd := exec.Command("bash", "-c", script.String())
-				cmd.Stdout = &got
-				cmd.Stderr = os.Stderr
-				_ = cmd.Run() // ignore exit code; only stdout content is compared
-				assert.Equal(t, tc.want, got.String())
-			})
-		}
-	})
 
 	t.Run("cleanup", func(t *testing.T) {
 		out := filepath.Join(t.TempDir(), "out")
