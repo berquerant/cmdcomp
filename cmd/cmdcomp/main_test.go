@@ -279,6 +279,94 @@ echo "${X}=${Y}"
 5_cleanup
 `, string(outBytes))
 	})
+
+	t.Run("dryrun", func(t *testing.T) {
+		for _, tc := range []struct {
+			title    string
+			arg      string
+			contains []string
+		}{
+			{
+				title: "exits zero and outputs shebang",
+				arg:   "--dryrun -- echo -- a -- b",
+				contains: []string{
+					"#!/usr/bin/env bash",
+					"set -euo pipefail",
+					"_CMDCOMP_TMPDIR=$(mktemp -d)",
+					"# left",
+					"echo a",
+					"# right",
+					"echo b",
+					"# diff",
+					"diff ",
+				},
+			},
+			{
+				title: "custom diff and preprocess appear in script",
+				arg:   `--dryrun -x 'diff -u' -p 'sed "s|a|c|"' -- echo -- a -- b`,
+				contains: []string{
+					"diff -u",
+					`sed "s|a|c|"`,
+					"# preprocess:left",
+					"# preprocess:right",
+				},
+			},
+			{
+				title: "startup and cleanup hooks appear in script",
+				arg:   `--dryrun -s 'echo startup1' -c 'echo cleanup1' -- echo -- a -- b`,
+				contains: []string{
+					"# startup[0]",
+					"echo startup1",
+					"# cleanup[0]",
+					"echo cleanup1",
+				},
+			},
+			{
+				title: "interceptor appears in script",
+				arg:   `--dryrun -i 'echo interceptor1' -- echo -- a -- b`,
+				contains: []string{
+					"# interceptor[0]",
+					"echo interceptor1",
+				},
+			},
+			{
+				title: "generated script is executable and produces diff output",
+				// dryrun generates a script; running that script should produce actual diff
+				arg: `--dryrun -- echo -- a -- b`,
+			},
+		} {
+			t.Run(tc.title, func(t *testing.T) {
+				var got bytes.Buffer
+				err := run(t, &got, "bash", "-c", bin+" "+tc.arg)
+				// dryrun must always exit 0
+				assert.Nil(t, err)
+				out := got.String()
+				for _, want := range tc.contains {
+					assert.Contains(t, out, want)
+				}
+			})
+		}
+
+		t.Run("generated script produces real diff when executed", func(t *testing.T) {
+			// Capture the dry-run script, then run it with bash and verify it produces diff output.
+			var script bytes.Buffer
+			err := run(t, &script, "bash", "-c", bin+" --dryrun -- echo -- a -- b")
+			if !assert.Nil(t, err) {
+				return
+			}
+			var diffOut bytes.Buffer
+			cmd := exec.Command("bash", "-c", script.String())
+			cmd.Stdout = &diffOut
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			// diff exits 1 when files differ
+			var exitErr *exec.ExitError
+			if assert.True(t, errors.As(err, &exitErr)) {
+				assert.Equal(t, 1, exitErr.ExitCode())
+			}
+			assert.Equal(t, "1c1\n< a\n---\n> b\n", diffOut.String())
+		})
+	})
 }
 
 func run(t *testing.T, stdout io.Writer, name string, arg ...string) error {
