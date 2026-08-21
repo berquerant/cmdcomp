@@ -10,18 +10,13 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-type Config struct {
-	config.Config
-	Success bool `yaml:"success,omitempty"`
-}
+type Config = config.Config
 
 func newDefaultConfig() *Config {
 	return &Config{
-		Config: config.Config{
-			Shell:     "bash",
-			Delimiter: "--",
-			Diff:      "diff",
-		},
+		Shell:     "bash",
+		Delimiter: "--",
+		Diff:      "diff",
 	}
 }
 
@@ -31,7 +26,10 @@ type ConfigSet struct {
 
 func (c *ConfigSet) Find(name string) (*Config, bool) {
 	x, ok := c.Presets[name]
-	return x, ok
+	if !ok {
+		return nil, false
+	}
+	return x, true
 }
 
 func (c *ConfigSet) merge(x *ConfigSet) *ConfigSet {
@@ -90,15 +88,15 @@ func loadConfigSet(path string) (*ConfigSet, error) {
 
 func applyDefaultValuesToConfigSet(cs *ConfigSet) {
 	dc := newDefaultConfig()
-	for _, c := range cs.Presets {
-		if c.Diff == "" {
-			c.Diff = dc.Diff
+	for _, p := range cs.Presets {
+		if p.Diff == "" {
+			p.Diff = dc.Diff
 		}
-		if c.Delimiter == "" {
-			c.Delimiter = dc.Delimiter
+		if p.Delimiter == "" {
+			p.Delimiter = dc.Delimiter
 		}
-		if c.Shell == "" {
-			c.Shell = dc.Shell
+		if p.Shell == "" {
+			p.Shell = dc.Shell
 		}
 	}
 }
@@ -107,51 +105,49 @@ func newConfigExample() *ConfigSet {
 	return &ConfigSet{
 		Presets: map[string]*Config{
 			"example": &Config{
-				Success: true,
-				Config: config.Config{
-					ShowCmdLog: true,
-					Debug:      true,
-					Startup: []string{
-						"echo startup",
-					},
-					Interceptor: []string{
-						"echo interceptor",
-					},
-					Preprocess: []string{
-						"grep common",
-					},
-					LeftPreprocess: []string{
-						"grep left",
-					},
-					RightPreprocess: []string{
-						"grep right",
-					},
-					Diff:      "diff",
-					WorkDir:   "workdir",
-					Shell:     "bash",
-					Delimiter: "--",
-					UseLabel:  true,
-					Env: []string{
-						"X=1",
-					},
-					LeftEnv: []string{
-						"Y=2",
-					},
-					RightEnv: []string{
-						"Y=3",
-					},
-					Cleanup: []string{
-						"echo cleanup",
-					},
-					CommonArgs: []string{
-						"echo",
-					},
-					LeftArgs: []string{
-						"common left",
-					},
-					RightArgs: []string{
-						"common right",
-					},
+				Success:    true,
+				ShowCmdLog: true,
+				Debug:      true,
+				Startup: []string{
+					"echo startup",
+				},
+				Interceptor: []string{
+					"echo interceptor",
+				},
+				Preprocess: []string{
+					"grep common",
+				},
+				LeftPreprocess: []string{
+					"grep left",
+				},
+				RightPreprocess: []string{
+					"grep right",
+				},
+				Diff:      "diff",
+				WorkDir:   "workdir",
+				Shell:     "bash",
+				Delimiter: "--",
+				UseLabel:  true,
+				Env: []string{
+					"X=1",
+				},
+				LeftEnv: []string{
+					"Y=2",
+				},
+				RightEnv: []string{
+					"Y=3",
+				},
+				Cleanup: []string{
+					"echo cleanup",
+				},
+				CommonArgs: []string{
+					"echo",
+				},
+				LeftArgs: []string{
+					"common left",
+				},
+				RightArgs: []string{
+					"common right",
 				},
 			},
 		},

@@ -67,8 +67,14 @@ This document provides development instructions, project structure, architectura
    - `realExecutor` and `DryRunExecutor` implement the same interface. This ensures dry-run scripts and real executions never drift out of sync.
 2. **Sentinel Errors & Phase Context**:
    - Execution errors are tagged with sentinel errors (`run.ErrDiff`, `run.ErrHook`, `run.ErrGenCmd`, `run.ErrPipeline`) and wrapped with the phase name (e.g. `run left`, `run right`, `run startup[0]`, `run preprocess:left pipeline`).
-3. **Exit Code Conventions**:
-   - `0`: No diff detected, `--dryrun`, `--version`/`--help`, or diff detected with `--success`.
+3. **Configuration & Environment Variables**:
+   - `pkg/config/config.go` (`config.Config`) is the **single source of truth** for all runtime and CLI configuration options.
+   - CLI flags are in kebab-case (`--show-cmd-log`, `--dry-run`, `--left-preprocess`, etc.).
+   - All options can be configured via environment variables with prefix `CMDCOMP_` (e.g. `CMDCOMP_DIFF`, `CMDCOMP_SHOW_CMD_LOG`).
+   - Configuration Precedence: **Default/Preset < Environment Variables (`CMDCOMP_*`) < CLI Flags**.
+   - Slices for commands (`startup`, `interceptor`, `preprocess`, `cleanup`) use `sep:"\n"` for newline separation in env vars. Slices for env vars (`env`, `left-env`, `right-env`) use `sep:","`.
+4. **Exit Code Conventions**:
+   - `0`: No diff detected, `--dry-run`, `--version`/`--help`, or diff detected with `--success`.
    - `1`: Diff detected (diff command exited with 1).
    - `2`: Process failure (command failure, hook failure, pipeline failure, timeout, flag/config errors). Always exits with `2` even if `--success` is specified.
 
@@ -99,6 +105,53 @@ make bin/cmdcomp
 
 ## 5. Coding & Testing Guidelines
 
-- **Golden Tests**: When modifying CLI flags or usage texts, run `make golden` and `make README.md` to keep `usage.golden` and `README.md` in sync.
 - **Error Identification**: When adding new execution phases or modifying process spawning, ensure errors are wrapped with clear phase descriptions so users know exactly which command failed or timed out.
 - **Concurrency & Resource Safety**: Ensure temporary directories and open file handles are cleanly closed, and `defer` cleanup hooks are always run.
+
+---
+
+## 6. Managing Generated Files & Handling Diffs
+
+`make lint` runs `git diff --exit-code` on `NOTICE` and `README.md`. Therefore, when these files or golden files change, you **MUST review the generated diff and `git add` them**; otherwise, `make lint` will fail.
+
+### 1. `NOTICE` (Third-Party Licenses)
+- **Trigger**: Added, upgraded, or removed a Go module in `go.mod`.
+- **How to update**:
+  ```bash
+  ./hack/license.sh report > NOTICE
+  ```
+  *(Requires network access to fetch upstream licenses)*.
+- **Next steps**: Review `git diff NOTICE`, and run `git add NOTICE`.
+
+### 2. `pkg/cli/testdata/usage.golden` (CLI Usage & Help Text)
+- **Trigger**: Added/renamed flags, updated descriptions/examples, or changed `pkg/cli/usage.go`.
+- **How to update**:
+  ```bash
+  make golden
+  ```
+- **Next steps**: Review `git diff pkg/cli/testdata/usage.golden`, and run `git add pkg/cli/testdata/usage.golden`.
+
+### 3. `README.md` (Generated Documentation)
+- **Trigger**: CLI flags, usage outputs, or built-in presets have changed.
+- **How to update**:
+  ```bash
+  make README.md
+  ```
+- **Next steps**: Review `git diff README.md`, and run `git add README.md`.
+
+### Complete Update & Verification Workflow
+When modifying flags or dependencies:
+```bash
+# 1. Regenerate
+make golden
+make README.md
+./hack/license.sh report > NOTICE
+
+# 2. Review diffs and stage
+git diff
+git add pkg/cli/testdata/usage.golden README.md NOTICE
+
+# 3. Verify
+make lint
+make test
+```

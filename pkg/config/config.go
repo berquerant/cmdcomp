@@ -17,32 +17,39 @@ var (
 )
 
 type Config struct {
-	ShowCmdLog      bool     `yaml:"showCmdLog,omitempty"`
-	Debug           bool     `yaml:"debug,omitempty"`
-	DryRun          bool     `yaml:"dryrun,omitempty"`
-	Startup         []string `yaml:"startup,omitempty"`
-	Interceptor     []string `yaml:"interceptor,omitempty"`
-	Preprocess      []string `yaml:"preprocess,omitempty"`
-	LeftPreprocess  []string `yaml:"leftPreprocess,omitempty"`
-	RightPreprocess []string `yaml:"rightPreprocess,omitempty"`
-	Diff            string   `yaml:"diff,omitempty"`
-	WorkDir         string   `yaml:"workDir,omitempty"`
-	Shell           string   `yaml:"shell,omitempty"`
-	Delimiter       string   `yaml:"delimiter,omitempty"`
-	UseLabel        bool     `yaml:"label,omitempty"`
-	Env             []string `yaml:"env,omitempty"`
-	LeftEnv         []string `yaml:"leftEnv,omitempty"`
-	RightEnv        []string `yaml:"rightEnv,omitempty"`
-	Cleanup         []string `yaml:"cleanup,omitempty"`
+	ShowCmdLog      bool          `name:"show-cmd-log" usage:"print stdout and stderr of executed subcommands to log output" yaml:"show-cmd-log,omitempty"`
+	Debug           bool          `name:"debug" usage:"enable debug log output" yaml:"debug,omitempty"`
+	DryRun          bool          `name:"dry-run" usage:"print generated bash script capturing the full execution pipeline without executing commands" yaml:"dry-run,omitempty"`
+	// Command list hooks: separated by newline (\n) in env vars to allow quotes/delimiters in scripts safely.
+	Startup         []string      `name:"startup" short:"s" split:"true" sep:"\n" usage:"command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"startup,omitempty"`
+	Interceptor     []string      `name:"interceptor" short:"i" split:"true" sep:"\n" usage:"command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"interceptor,omitempty"`
+	Preprocess      []string      `name:"preprocess" short:"p" split:"true" sep:"\n" usage:"filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"preprocess,omitempty"`
+	LeftPreprocess  []string      `name:"left-preprocess" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"left-preprocess,omitempty"`
+	RightPreprocess []string      `name:"right-preprocess" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"right-preprocess,omitempty"`
+	Diff            string        `name:"diff" short:"x" default:"diff" usage:"diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c')" yaml:"diff,omitempty"`
+	WorkDir         string        `name:"work-dir" short:"w" usage:"working directory for temporary output files. When specified, temporary files are preserved after execution" yaml:"work-dir,omitempty"`
+	Shell           string        `name:"shell" short:"S" default:"bash" usage:"shell executable used to run subcommands" yaml:"shell,omitempty"`
+	Delimiter       string        `name:"delimiter" short:"d" default:"--" usage:"delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---')" yaml:"delimiter,omitempty"`
+	UseLabel        bool          `name:"label" short:"l" usage:"pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)" yaml:"label,omitempty"`
+	// Environment variable pairs (KEY=VALUE): separated by comma (,) in env vars.
+	Env             []string      `name:"env" short:"e" split:"true" sep:"," usage:"environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"env,omitempty"`
+	LeftEnv         []string      `name:"left-env" split:"true" sep:"," usage:"environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"left-env,omitempty"`
+	RightEnv        []string      `name:"right-env" split:"true" sep:"," usage:"environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"right-env,omitempty"`
+	Cleanup         []string      `name:"cleanup" short:"c" split:"true" sep:"\n" usage:"command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines" yaml:"cleanup,omitempty"`
 
-	CommonArgs []string `yaml:"commonArgs,omitempty"`
-	LeftArgs   []string `yaml:"leftArgs,omitempty"`
-	RightArgs  []string `yaml:"rightArgs,omitempty"`
+	CommonArgs []string `name:"-" yaml:"common-args,omitempty"`
+	LeftArgs   []string `name:"-" yaml:"left-args,omitempty"`
+	RightArgs  []string `name:"-" yaml:"right-args,omitempty"`
 
-	Writer         io.Writer     `json:"-" yaml:"-"`
-	TempDir        string        `json:"-" yaml:"-"`
-	Timeout        time.Duration `yaml:"timeout,omitempty"`
-	ProcessTimeout time.Duration `yaml:"processTimeout,omitempty"`
+	Writer         io.Writer     `name:"-" json:"-" yaml:"-"`
+	TempDir        string        `name:"-" json:"-" yaml:"-"`
+	Timeout        time.Duration `name:"timeout" usage:"maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')" yaml:"timeout,omitempty"`
+	ProcessTimeout time.Duration `name:"process-timeout" usage:"maximum timeout for each individual subcommand execution (e.g. '10s', '1m')" yaml:"process-timeout,omitempty"`
+
+	Success    bool   `name:"success" usage:"exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2" yaml:"success,omitempty"`
+	ConfigPath string `name:"config" usage:"configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)" yaml:"-"`
+	PresetName string `name:"preset" usage:"name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff')" yaml:"-"`
+	Version    bool   `name:"version" usage:"display version and exit" yaml:"-"`
 }
 
 func (c *Config) Init(args []string) error {

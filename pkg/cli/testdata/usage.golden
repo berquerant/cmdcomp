@@ -74,38 +74,37 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
 ```yaml
 presets:
   example:
-    config:
-      showCmdLog: true
-      debug: true
-      startup:
-        - echo startup
-      interceptor:
-        - echo interceptor
-      preprocess:
-        - grep common
-      leftPreprocess:
-        - grep left
-      rightPreprocess:
-        - grep right
-      diff: diff
-      workDir: workdir
-      shell: bash
-      delimiter: --
-      label: true
-      env:
-        - X=1
-      leftEnv:
-        - Y=2
-      rightEnv:
-        - Y=3
-      cleanup:
-        - echo cleanup
-      commonArgs:
-        - echo
-      leftArgs:
-        - common left
-      rightArgs:
-        - common right
+    show-cmd-log: true
+    debug: true
+    startup:
+      - echo startup
+    interceptor:
+      - echo interceptor
+    preprocess:
+      - grep common
+    left-preprocess:
+      - grep left
+    right-preprocess:
+      - grep right
+    diff: diff
+    work-dir: workdir
+    shell: bash
+    delimiter: --
+    label: true
+    env:
+      - X=1
+    left-env:
+      - Y=2
+    right-env:
+      - Y=3
+    cleanup:
+      - echo cleanup
+    common-args:
+      - echo
+    left-args:
+      - common left
+    right-args:
+      - common right
     success: true
 ```
 
@@ -114,83 +113,75 @@ presets:
 ```yaml
 presets:
   dyff:
-    config:
-      diff: dyff between --omit-header --set-exit-code
-      shell: bash
-      delimiter: --
+    diff: dyff between --omit-header --set-exit-code
+    shell: bash
+    delimiter: --
   helm:
-    config:
-      startup:
-        - helm repo update
-      diff: objdiff -cv
-      shell: bash
-      delimiter: --
+    startup:
+      - helm repo update
+    diff: objdiff -cv
+    shell: bash
+    delimiter: --
   helm-chart:
-    config:
-      startup:
-        - helm repo update
-      preprocess:
-        - yq -P 'sort_keys(..)'
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
-      commonArgs:
-        - helm
-        - show
-        - chart
-        - $CHART
-      leftArgs:
-        - --version
-        - $LEFT
-      rightArgs:
-        - --version
-        - $RIGHT
+    startup:
+      - helm repo update
+    preprocess:
+      - yq -P 'sort_keys(..)'
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
+    common-args:
+      - helm
+      - show
+      - chart
+      - $CHART
+    left-args:
+      - --version
+      - $LEFT
+    right-args:
+      - --version
+      - $RIGHT
   helm-values:
-    config:
-      startup:
-        - helm repo update
-      preprocess:
-        - yq -P 'sort_keys(..)'
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
-      commonArgs:
-        - helm
-        - show
-        - values
-        - $CHART
-      leftArgs:
-        - --version
-        - $LEFT
-      rightArgs:
-        - --version
-        - $RIGHT
+    startup:
+      - helm repo update
+    preprocess:
+      - yq -P 'sort_keys(..)'
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
+    common-args:
+      - helm
+      - show
+      - values
+      - $CHART
+    left-args:
+      - --version
+      - $LEFT
+    right-args:
+      - --version
+      - $RIGHT
   json:
-    config:
-      preprocess:
-        - jq -S .
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
+    preprocess:
+      - jq -S .
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
   k8s:
-    config:
-      diff: objdiff -cv
-      shell: bash
-      delimiter: --
+    diff: objdiff -cv
+    shell: bash
+    delimiter: --
   k8s-clean:
-    config:
-      preprocess:
-        - yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'
-      diff: objdiff -cv
-      shell: bash
-      delimiter: --
+    preprocess:
+      - yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'
+    diff: objdiff -cv
+    shell: bash
+    delimiter: --
   yml:
-    config:
-      preprocess:
-        - yq -P 'sort_keys(..)'
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
+    preprocess:
+      - yq -P 'sort_keys(..)'
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
 ```
 
 ### Usage
@@ -209,9 +200,8 @@ cmdcomp --preset json -- ...
 ```yaml
 presets:
   sentry:
-    config:
-      diff: objdiff -cv
-      commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
+    diff: objdiff -cv
+    common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
 ```
 
 then
@@ -220,7 +210,7 @@ then
 # helm template sentry/sentry --version 28.0.3 > leftfile
 # helm template sentry/sentry --version 29.5.1 > rightfile
 # objdiff -cv leftfile rightfile
-cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'
+cmdcomp --config CONFIG --preset sentry --left-env 'VERSION=28.0.3' --right-env 'VERSION=29.5.1'
 ```
 
 ## Exit Codes
@@ -228,6 +218,14 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
 - 0: No diff detected, dryrun, version/help displayed, or diff detected with --success.
 - 1: Diff detected (exit code of diff command).
 - 2: Process failure (command error, hook error, pipeline error, timeout, config/flag error). Always returns 2 even if --success is specified.
+
+## Environment Variables
+
+All flags can be specified via environment variables using the 'CMDCOMP_' prefix (e.g. CMDCOMP_DIFF, CMDCOMP_PRESET, CMDCOMP_SHOW_CMD_LOG).
+Precedence: Default/Preset < Environment Variables < Command-line Flags
+
+- Command lists (CMDCOMP_STARTUP, CMDCOMP_PREPROCESS, etc.): Separate multiple commands with newline.
+- Environment variable pairs (CMDCOMP_ENV, CMDCOMP_LEFT_ENV, CMDCOMP_RIGHT_ENV): Separate entries with comma (,).
 
 ## Flags
 

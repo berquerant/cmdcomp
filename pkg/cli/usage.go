@@ -113,16 +113,15 @@ cmdcomp --preset json -- ...`)
 func (u UsageBuilder) configExamplesCode() string {
 	return u.code("yaml", `presets:
   sentry:
-    config:
-      diff: objdiff -cv
-      commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]`)
+    diff: objdiff -cv
+    common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]`)
 }
 
 func (u UsageBuilder) sentryShellCode() string {
 	return u.code("shell", `# helm template sentry/sentry --version 28.0.3 > leftfile
 # helm template sentry/sentry --version 29.5.1 > rightfile
 # objdiff -cv leftfile rightfile
-cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'`)
+cmdcomp --config CONFIG --preset sentry --left-env 'VERSION=28.0.3' --right-env 'VERSION=29.5.1'`)
 }
 
 var rawUsageTemplate = `cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
@@ -162,6 +161,14 @@ then
 - 0: No diff detected, dryrun, version/help displayed, or diff detected with --success.
 - 1: Diff detected (exit code of diff command).
 - 2: Process failure (command error, hook error, pipeline error, timeout, config/flag error). Always returns 2 even if --success is specified.
+
+## Environment Variables
+
+All flags can be specified via environment variables using the 'CMDCOMP_' prefix (e.g. CMDCOMP_DIFF, CMDCOMP_PRESET, CMDCOMP_SHOW_CMD_LOG).
+Precedence: Default/Preset < Environment Variables < Command-line Flags
+
+- Command lists (CMDCOMP_STARTUP, CMDCOMP_PREPROCESS, etc.): Separate multiple commands with newline.
+- Environment variable pairs (CMDCOMP_ENV, CMDCOMP_LEFT_ENV, CMDCOMP_RIGHT_ENV): Separate entries with comma (,).
 
 ## Flags
 

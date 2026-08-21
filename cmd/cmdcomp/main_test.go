@@ -45,7 +45,7 @@ func (tc e2eTestCase) run(t *testing.T, bin string) {
 		if !tc.skipDryrun {
 			t.Run("dryrun", func(t *testing.T) {
 				var script bytes.Buffer
-				if !assert.Nil(t, run(t, &script, "bash", "-c", bin+" --dryrun "+tc.arg), "dryrun must exit 0") {
+				if !assert.Nil(t, run(t, &script, "bash", "-c", bin+" --dry-run "+tc.arg), "dryrun must exit 0") {
 					return
 				}
 				var got bytes.Buffer
@@ -165,7 +165,7 @@ echo "${X}=${Y}"
 		},
 		{
 			title: "preprocess left and right",
-			arg:   `--leftPreprocess 'sed "s|a|c|"' --rightPreprocess 'sed "s|a|d|"' -- echo -- a -- a`,
+			arg:   `--left-preprocess 'sed "s|a|c|"' --right-preprocess 'sed "s|a|d|"' -- echo -- a -- a`,
 			want: `1c1
 < c
 ---
@@ -185,7 +185,7 @@ echo "${X}=${Y}"
 		},
 		{
 			title: "env script",
-			arg:   `--env "X=x" --leftEnv "Y=1" --rightEnv "Y=2" -- ` + envEcho,
+			arg:   `--env "X=x" --left-env "Y=1" --right-env "Y=2" -- ` + envEcho,
 			want: `1c1
 < x=1
 ---
@@ -195,7 +195,7 @@ echo "${X}=${Y}"
 		},
 		{
 			title: "env",
-			arg:   `--env "X=x" --leftEnv "Y=1" --rightEnv "Y=2" -- echo '$X=$Y'`,
+			arg:   `--env "X=x" --left-env "Y=1" --right-env "Y=2" -- echo '$X=$Y'`,
 			want: `1c1
 < x=1
 ---
@@ -233,14 +233,14 @@ echo "${X}=${Y}"
 		},
 		{
 			title:      "left preprocess fail e2e",
-			arg:        `--leftPreprocess 'grep non_existent' -- echo -- a -- b`,
+			arg:        `--left-preprocess 'grep non_existent' -- echo -- a -- b`,
 			wantStatus: 2,
 			wantStderr: "run preprocess:left pipeline",
 			skipDryrun: true,
 		},
 		{
 			title:      "right preprocess fail e2e",
-			arg:        `--rightPreprocess 'grep non_existent' -- echo -- a -- b`,
+			arg:        `--right-preprocess 'grep non_existent' -- echo -- a -- b`,
 			wantStatus: 2,
 			wantStderr: "run preprocess:right pipeline",
 			skipDryrun: true,
@@ -254,7 +254,7 @@ echo "${X}=${Y}"
 		},
 		{
 			title:      "process timeout e2e",
-			arg:        `--processTimeout 50ms -- bash -c -- "echo a" -- "sleep 1"`,
+			arg:        `--process-timeout 50ms -- bash -c -- "echo a" -- "sleep 1"`,
 			wantStatus: 2,
 			wantStderr: "run right",
 			skipDryrun: true,
@@ -355,7 +355,7 @@ echo "${X}=${Y}"
 		}{
 			{
 				title: "exits zero and outputs shebang",
-				arg:   "--dryrun -- echo -- a -- b",
+				arg:   "--dry-run -- echo -- a -- b",
 				contains: []string{
 					"#!/usr/bin/env bash",
 					"set -euo pipefail",
@@ -370,7 +370,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "custom diff and preprocess appear in script",
-				arg:   `--dryrun -x 'diff -u' -p 'sed "s|a|c|"' -- echo -- a -- b`,
+				arg:   `--dry-run -x 'diff -u' -p 'sed "s|a|c|"' -- echo -- a -- b`,
 				contains: []string{
 					"diff -u",
 					`sed "s|a|c|"`,
@@ -380,7 +380,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "startup and cleanup hooks appear in script",
-				arg:   `--dryrun -s 'echo startup1' -c 'echo cleanup1' -- echo -- a -- b`,
+				arg:   `--dry-run -s 'echo startup1' -c 'echo cleanup1' -- echo -- a -- b`,
 				contains: []string{
 					"# startup[0]",
 					"echo startup1",
@@ -390,7 +390,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "interceptor appears in script",
-				arg:   `--dryrun -i 'echo interceptor1' -- echo -- a -- b`,
+				arg:   `--dry-run -i 'echo interceptor1' -- echo -- a -- b`,
 				contains: []string{
 					"# interceptor[0]",
 					"echo interceptor1",
@@ -399,12 +399,12 @@ echo "${X}=${Y}"
 			{
 				title: "generated script is executable and produces diff output",
 				// dryrun generates a script; running that script should produce actual diff
-				arg: `--dryrun -- echo -- a -- b`,
+				arg: `--dry-run -- echo -- a -- b`,
 			},
 			// ---- multiple hooks / preprocesses / interceptors ----
 			{
 				title: "multiple startup hooks all appear with correct indices",
-				arg:   `--dryrun -s 'echo s0' -s 'echo s1' -s 'echo s2' -- echo -- a -- b`,
+				arg:   `--dry-run -s 'echo s0' -s 'echo s1' -s 'echo s2' -- echo -- a -- b`,
 				contains: []string{
 					"# startup[0]", "echo s0",
 					"# startup[1]", "echo s1",
@@ -413,7 +413,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "multiple cleanup hooks all appear with correct indices",
-				arg:   `--dryrun -c 'echo c0' -c 'echo c1' -c 'echo c2' -- echo -- a -- b`,
+				arg:   `--dry-run -c 'echo c0' -c 'echo c1' -c 'echo c2' -- echo -- a -- b`,
 				contains: []string{
 					"# cleanup[0]", "echo c0",
 					"# cleanup[1]", "echo c1",
@@ -422,7 +422,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "multiple interceptors all appear with correct indices",
-				arg:   `--dryrun -i 'echo i0' -i 'echo i1' -i 'echo i2' -- echo -- a -- b`,
+				arg:   `--dry-run -i 'echo i0' -i 'echo i1' -i 'echo i2' -- echo -- a -- b`,
 				contains: []string{
 					"# interceptor[0]", "echo i0",
 					"# interceptor[1]", "echo i1",
@@ -431,7 +431,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "multiple preprocess commands form a pipeline",
-				arg:   `--dryrun -p 'sed "s|a|x|"' -p 'sed "s|x|y|"' -p cat -- echo -- a -- b`,
+				arg:   `--dry-run -p 'sed "s|a|x|"' -p 'sed "s|x|y|"' -p cat -- echo -- a -- b`,
 				contains: []string{
 					"# preprocess:left",
 					`sed "s|a|x|"`,
@@ -441,7 +441,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "leftPreprocess and rightPreprocess independently",
-				arg:   `--dryrun --leftPreprocess 'tr a A' --leftPreprocess 'tr A Z' --rightPreprocess 'tr b B' -- echo -- a -- b`,
+				arg:   `--dry-run --left-preprocess 'tr a A' --left-preprocess 'tr A Z' --right-preprocess 'tr b B' -- echo -- a -- b`,
 				contains: []string{
 					"# preprocess:left", "tr a A", "| tr A Z",
 					"# preprocess:right", "tr b B",
@@ -449,7 +449,7 @@ echo "${X}=${Y}"
 			},
 			{
 				title: "all hooks and preprocesses combined",
-				arg:   `--dryrun -s 'echo s0' -s 'echo s1' -i 'echo i0' -i 'echo i1' -c 'echo c0' -p 'cat' --leftPreprocess 'tr a L' --rightPreprocess 'tr b R' -- echo -- a -- b`,
+				arg:   `--dry-run -s 'echo s0' -s 'echo s1' -i 'echo i0' -i 'echo i1' -c 'echo c0' -p 'cat' --left-preprocess 'tr a L' --right-preprocess 'tr b R' -- echo -- a -- b`,
 				contains: []string{
 					"# startup[0]", "echo s0",
 					"# startup[1]", "echo s1",
@@ -477,7 +477,7 @@ echo "${X}=${Y}"
 		t.Run("generated script produces real diff when executed", func(t *testing.T) {
 			// Capture the dry-run script, then run it with bash and verify it produces diff output.
 			var script bytes.Buffer
-			err := run(t, &script, "bash", "-c", bin+" --dryrun -- echo -- a -- b")
+			err := run(t, &script, "bash", "-c", bin+" --dry-run -- echo -- a -- b")
 			if !assert.Nil(t, err) {
 				return
 			}
@@ -492,6 +492,20 @@ echo "${X}=${Y}"
 				assert.Equal(t, 1, exitErr.ExitCode())
 			}
 			assert.Equal(t, "1c1\n< a\n---\n> b\n", diffOut.String())
+		})
+	})
+
+	t.Run("env vars", func(t *testing.T) {
+		t.Run("CMDCOMP_DIFF and CMDCOMP_ENV", func(t *testing.T) {
+			cmdStr := fmt.Sprintf(`CMDCOMP_DIFF='diff -u --label L --label R' CMDCOMP_ENV='X=x, Y=y' %s -- bash -c -- 'echo $X' -- 'echo $Y'`, bin)
+			var got bytes.Buffer
+			err := run(t, &got, "bash", "-c", cmdStr)
+			var exitErr *exec.ExitError
+			if !assert.True(t, errors.As(err, &exitErr)) {
+				return
+			}
+			assert.Equal(t, 1, exitErr.ExitCode())
+			assert.Equal(t, "--- L\n+++ R\n@@ -1 +1 @@\n-x\n+y\n", got.String())
 		})
 	})
 }

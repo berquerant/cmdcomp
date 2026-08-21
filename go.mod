@@ -1,6 +1,6 @@
 module github.com/berquerant/cmdcomp
 
-go 1.26.5
+go 1.26.6
 
 tool github.com/google/go-licenses/v2
 
@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/berquerant/structconfig v0.12.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -23,11 +24,12 @@ require (
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/mod v0.35.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
+	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/tools v0.47.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
 )
