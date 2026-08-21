@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/cli"
-	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,13 +34,11 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				Config: config.Config{
-					Diff:      "diff",
-					Delimiter: "--",
-					Shell:     "bash",
-					CommonArgs: []string{
-						"echo", "x",
-					},
+				Diff:      "diff",
+				Delimiter: "--",
+				Shell:     "bash",
+				CommonArgs: []string{
+					"echo", "x",
 				},
 			},
 		},
@@ -53,16 +50,14 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				Config: config.Config{
-					Diff:      "diff",
-					Delimiter: "--",
-					Shell:     "bash",
-					Preprocess: []string{
-						"grep base",
-					},
-					CommonArgs: []string{
-						"echo", "x",
-					},
+				Diff:      "diff",
+				Delimiter: "--",
+				Shell:     "bash",
+				Preprocess: []string{
+					"grep base",
+				},
+				CommonArgs: []string{
+					"echo", "x",
 				},
 			},
 		},
@@ -74,17 +69,15 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				Config: config.Config{
-					Diff:      "diff",
-					Delimiter: "--",
-					Shell:     "bash",
-					Startup: []string{
-						"echo s1",
-						"echo s2",
-					},
-					CommonArgs: []string{
-						"echo", "x",
-					},
+				Diff:      "diff",
+				Delimiter: "--",
+				Shell:     "bash",
+				Startup: []string{
+					"echo s1",
+					"echo s2",
+				},
+				CommonArgs: []string{
+					"echo", "x",
 				},
 			},
 		},
@@ -96,17 +89,15 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				Config: config.Config{
-					Diff:      "diff",
-					Delimiter: "--",
-					Shell:     "bash",
-					Cleanup: []string{
-						"echo c1",
-						"echo c2",
-					},
-					CommonArgs: []string{
-						"echo", "x",
-					},
+				Diff:      "diff",
+				Delimiter: "--",
+				Shell:     "bash",
+				Cleanup: []string{
+					"echo c1",
+					"echo c2",
+				},
+				CommonArgs: []string{
+					"echo", "x",
 				},
 			},
 		},
@@ -117,13 +108,11 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				Config: config.Config{
-					Diff:      "diff",
-					Delimiter: "--",
-					Shell:     "sh",
-					CommonArgs: []string{
-						"echo", "x",
-					},
+				Diff:      "diff",
+				Delimiter: "--",
+				Shell:     "sh",
+				CommonArgs: []string{
+					"echo", "x",
 				},
 			},
 		},
@@ -135,15 +124,13 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				Config: config.Config{
-					Diff:           "diff",
-					Delimiter:      "--",
-					Shell:          "bash",
-					Timeout:        time.Minute,
-					ProcessTimeout: 5 * time.Second,
-					CommonArgs: []string{
-						"echo", "x",
-					},
+				Diff:           "diff",
+				Delimiter:      "--",
+				Shell:          "bash",
+				Timeout:        time.Minute,
+				ProcessTimeout: 5 * time.Second,
+				CommonArgs: []string{
+					"echo", "x",
 				},
 			},
 		},

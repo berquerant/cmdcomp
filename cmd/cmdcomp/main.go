@@ -19,7 +19,7 @@ func main() {
 		fail(err)
 	}
 
-	if err := run.Main(&c.Config); err != nil {
+	if err := run.Main(c.AsConfig()); err != nil {
 		if errors.Is(err, run.ErrDiff) {
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {

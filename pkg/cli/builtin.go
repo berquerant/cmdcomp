@@ -4,25 +4,25 @@ import "github.com/berquerant/cmdcomp/pkg/config"
 
 func builtinConfigSet() *ConfigSet {
 	cs := &ConfigSet{
-		Presets: map[string]*Config{
-			"json": &Config{
+		Presets: map[string]*Preset{
+			"json": &Preset{
 				Config: config.Config{
 					Preprocess: []string{`jq -S .`},
 					Diff:       "diff -u --color",
 				},
 			},
-			"yml": &Config{
+			"yml": &Preset{
 				Config: config.Config{
 					Preprocess: []string{`yq -P 'sort_keys(..)'`},
 					Diff:       "diff -u --color",
 				},
 			},
-			"k8s": &Config{
+			"k8s": &Preset{
 				Config: config.Config{
 					Diff: "objdiff -cv",
 				},
 			},
-			"k8s-clean": &Config{
+			"k8s-clean": &Preset{
 				Config: config.Config{
 					Preprocess: []string{
 						`yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'`,
@@ -30,7 +30,7 @@ func builtinConfigSet() *ConfigSet {
 					Diff: "objdiff -cv",
 				},
 			},
-			"helm": &Config{
+			"helm": &Preset{
 				Config: config.Config{
 					Diff: "objdiff -cv",
 					Startup: []string{
@@ -38,7 +38,7 @@ func builtinConfigSet() *ConfigSet {
 					},
 				},
 			},
-			"helm-chart": &Config{
+			"helm-chart": &Preset{
 				Config: config.Config{
 					Diff: "diff -u --color",
 					Startup: []string{
@@ -56,7 +56,7 @@ func builtinConfigSet() *ConfigSet {
 					},
 				},
 			},
-			"helm-values": &Config{
+			"helm-values": &Preset{
 				Config: config.Config{
 					Diff: "diff -u --color",
 					Startup: []string{
@@ -74,7 +74,7 @@ func builtinConfigSet() *ConfigSet {
 					},
 				},
 			},
-			"dyff": &Config{
+			"dyff": &Preset{
 				Config: config.Config{
 					Diff: "dyff between --omit-header --set-exit-code",
 				},
