@@ -179,40 +179,80 @@ func TestParseConfig_Env(t *testing.T) {
 	assert.Equal(t, want, got)
 
 	// Test CLI flag overrides environment variable
-	t.Run("flag overrides env", func(t *testing.T) {
-		got, err := cli.ParseConfig([]string{"--diff", "flag-diff", "-S", "sh", "--", "echo", "x"}, os.Stdout, os.Stderr)
-		assert.Nil(t, err)
-		assert.Equal(t, "flag-diff", got.Diff)
-		assert.Equal(t, "sh", got.Shell)
-	})
-
-	t.Run("stdin validation", func(t *testing.T) {
-		// '-' is valid
-		got, err := cli.ParseConfig([]string{"--stdin", "-", "--", "echo", "x"}, os.Stdout, os.Stderr)
-		assert.Nil(t, err)
-		assert.Equal(t, "-", got.Stdin)
-
-		// '@file' is valid
-		got, err = cli.ParseConfig([]string{"--stdin", "@data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
-		assert.Nil(t, err)
-		assert.Equal(t, "@data.txt", got.Stdin)
-
-		// left-stdin and right-stdin
-		got, err = cli.ParseConfig([]string{"--left-stdin", "-", "--right-stdin", "@data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
-		assert.Nil(t, err)
-		assert.Equal(t, "-", got.LeftStdin)
-		assert.Equal(t, "@data.txt", got.RightStdin)
-		assert.Equal(t, "-", got.GetLeftStdin())
-		assert.Equal(t, "@data.txt", got.GetRightStdin())
-
-		// raw filename without '@' is invalid
-		_, err = cli.ParseConfig([]string{"--stdin", "data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
-		assert.ErrorContains(t, err, "invalid stdin 'data.txt': must be '-' or '@filename'")
-
-		_, err = cli.ParseConfig([]string{"--left-stdin", "data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
-		assert.ErrorContains(t, err, "invalid left-stdin 'data.txt': must be '-' or '@filename'")
-
-		_, err = cli.ParseConfig([]string{"--right-stdin", "data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
-		assert.ErrorContains(t, err, "invalid right-stdin 'data.txt': must be '-' or '@filename'")
-	})
+	for _, tc := range []struct {
+		title      string
+		args       []string
+		wantDiff   string
+		wantShell  string
+		wantStdin  string
+		wantLeft   string
+		wantRight  string
+		wantErrMsg string
+	}{
+		{
+			title:     "flag overrides env",
+			args:      []string{"--diff", "flag-diff", "-S", "sh", "--", "echo", "x"},
+			wantDiff:  "flag-diff",
+			wantShell: "sh",
+		},
+		{
+			title:     "stdin '-' is valid",
+			args:      []string{"--stdin", "-", "--", "echo", "x"},
+			wantStdin: "-",
+			wantLeft:  "-",
+			wantRight: "-",
+		},
+		{
+			title:     "stdin '@file' is valid",
+			args:      []string{"--stdin", "@data.txt", "--", "echo", "x"},
+			wantStdin: "@data.txt",
+			wantLeft:  "@data.txt",
+			wantRight: "@data.txt",
+		},
+		{
+			title:     "left-stdin and right-stdin",
+			args:      []string{"--left-stdin", "-", "--right-stdin", "@data.txt", "--", "echo", "x"},
+			wantLeft:  "-",
+			wantRight: "@data.txt",
+		},
+		{
+			title:      "raw stdin without '@' is invalid",
+			args:       []string{"--stdin", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid stdin 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:      "raw left-stdin without '@' is invalid",
+			args:       []string{"--left-stdin", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid left-stdin 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:      "raw right-stdin without '@' is invalid",
+			args:       []string{"--right-stdin", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid right-stdin 'data.txt': must be '-' or '@filename'",
+		},
+	} {
+		t.Run(tc.title, func(t *testing.T) {
+			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)
+			if tc.wantErrMsg != "" {
+				assert.ErrorContains(t, err, tc.wantErrMsg)
+				return
+			}
+			assert.Nil(t, err)
+			if tc.wantDiff != "" {
+				assert.Equal(t, tc.wantDiff, got.Diff)
+			}
+			if tc.wantShell != "" {
+				assert.Equal(t, tc.wantShell, got.Shell)
+			}
+			if tc.wantStdin != "" {
+				assert.Equal(t, tc.wantStdin, got.Stdin)
+			}
+			if tc.wantLeft != "" {
+				assert.Equal(t, tc.wantLeft, got.GetLeftStdin())
+			}
+			if tc.wantRight != "" {
+				assert.Equal(t, tc.wantRight, got.GetRightStdin())
+			}
+		})
+	}
 }
