@@ -289,6 +289,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -S, --shell string                   shell executable used to run subcommands (default "bash")
       --show-cmd-log                   print stdout and stderr of executed subcommands to log output
   -s, --startup stringArray            command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines
+      --stdin string                   pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)
       --success                        exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2
       --timeout duration               maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')
       --version                        display version and exit

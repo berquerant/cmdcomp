@@ -145,6 +145,8 @@ func TestParseConfig(t *testing.T) {
 			assert.Nil(t, err)
 			tc.want.Writer = nil
 			got.Writer = nil
+			tc.want.Reader = nil
+			got.Reader = nil
 			got.TempDir = ""
 			assert.Equal(t, tc.want, got)
 		})
@@ -172,6 +174,7 @@ func TestParseConfig_Env(t *testing.T) {
 		CommonArgs:     []string{"echo", "x"},
 	}
 	got.Writer = nil
+	got.Reader = nil
 	got.TempDir = ""
 	assert.Equal(t, want, got)
 
@@ -181,5 +184,21 @@ func TestParseConfig_Env(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "flag-diff", got.Diff)
 		assert.Equal(t, "sh", got.Shell)
+	})
+
+	t.Run("stdin validation", func(t *testing.T) {
+		// '-' is valid
+		got, err := cli.ParseConfig([]string{"--stdin", "-", "--", "echo", "x"}, os.Stdout, os.Stderr)
+		assert.Nil(t, err)
+		assert.Equal(t, "-", got.Stdin)
+
+		// '@file' is valid
+		got, err = cli.ParseConfig([]string{"--stdin", "@data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
+		assert.Nil(t, err)
+		assert.Equal(t, "@data.txt", got.Stdin)
+
+		// raw filename without '@' is invalid
+		_, err = cli.ParseConfig([]string{"--stdin", "data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
+		assert.ErrorContains(t, err, "invalid stdin 'data.txt': must be '-' or '@filename'")
 	})
 }

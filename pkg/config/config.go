@@ -36,11 +36,13 @@ type Config struct {
 	LeftEnv         []string      `name:"left-env" split:"true" sep:"," usage:"environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"left-env,omitempty"`
 	RightEnv        []string      `name:"right-env" split:"true" sep:"," usage:"environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"right-env,omitempty"`
 	Cleanup         []string      `name:"cleanup" short:"c" split:"true" sep:"\n" usage:"command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines" yaml:"cleanup,omitempty"`
+	Stdin           string        `name:"stdin" usage:"pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)" yaml:"stdin,omitempty"`
 
 	CommonArgs []string `name:"-" yaml:"common-args,omitempty"`
 	LeftArgs   []string `name:"-" yaml:"left-args,omitempty"`
 	RightArgs  []string `name:"-" yaml:"right-args,omitempty"`
 
+	Reader         io.Reader     `name:"-" json:"-" yaml:"-"`
 	Writer         io.Writer     `name:"-" json:"-" yaml:"-"`
 	TempDir        string        `name:"-" json:"-" yaml:"-"`
 	Timeout        time.Duration `name:"timeout" usage:"maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')" yaml:"timeout,omitempty"`
@@ -53,6 +55,9 @@ type Config struct {
 }
 
 func (c *Config) Init(args []string) error {
+	if err := c.validateStdin(); err != nil {
+		return err
+	}
 	if err := c.setTempDir(); err != nil {
 		return err
 	}
@@ -60,6 +65,13 @@ func (c *Config) Init(args []string) error {
 		return err
 	}
 	return nil
+}
+
+func (c *Config) validateStdin() error {
+	if c.Stdin == "" || c.Stdin == "-" || strings.HasPrefix(c.Stdin, "@") {
+		return nil
+	}
+	return fmt.Errorf("%w: invalid stdin '%s': must be '-' or '@filename'", ErrConfig, c.Stdin)
 }
 
 func (c *Config) Close() error {

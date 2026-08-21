@@ -90,6 +90,30 @@ func envPrefix(extraEnv []string) string {
 	return strings.Join(extraEnv, " ") + " "
 }
 
+// literalFileRef represents a raw shell-quoted literal file path.
+type literalFileRef struct{ path string }
+
+func (r literalFileRef) ShellExpr() string { return shellQuote(r.path) }
+
+func (e *DryRunExecutor) SetupStdin(_ context.Context, stdin string, _ io.Reader) (FileRef, error) {
+	if stdin == "" {
+		return nil, nil
+	}
+	if after, ok := strings.CutPrefix(stdin, "@"); ok {
+		path := after
+		return literalFileRef{path: path}, nil
+	}
+	if stdin == "-" {
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		fmt.Fprintf(e.w, "\n# stdin\n")
+		fmt.Fprintln(e.w, `_CMDCOMP_STDIN=$(mktemp "$_CMDCOMP_TMPDIR/stdin.XXXXXX")`)
+		fmt.Fprintln(e.w, `cat > "$_CMDCOMP_STDIN"`)
+		return varFileRef{varName: "_CMDCOMP_STDIN"}, nil
+	}
+	return nil, fmt.Errorf("invalid stdin '%s'", stdin)
+}
+
 func (e *DryRunExecutor) RunHook(_ context.Context, req HookRequest) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -108,7 +132,11 @@ func (e *DryRunExecutor) RunGenCmd(_ context.Context, req GenCmdRequest) (FileRe
 	varN := stepVar(req.Name)
 	fmt.Fprintf(e.w, "\n# %s\n", req.Name)
 	fmt.Fprintf(e.w, "%s=%s\n", varN, tmpPath(req.Name))
-	fmt.Fprintf(e.w, "%s%s > \"$%s\"\n", envPrefix(req.ExtraEnv), joinArgs(req.Args), varN)
+	stdinRedirect := ""
+	if req.Stdin != nil {
+		stdinRedirect = fmt.Sprintf(" < %s", req.Stdin.ShellExpr())
+	}
+	fmt.Fprintf(e.w, "%s%s%s > \"$%s\"\n", envPrefix(req.ExtraEnv), joinArgs(req.Args), stdinRedirect, varN)
 	return varFileRef{varName: varN}, nil
 }
 

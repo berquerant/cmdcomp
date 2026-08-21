@@ -491,6 +491,72 @@ i2
 			args: []string{"echo", "--", "a", "--", "a"},
 			want: "",
 		},
+		{
+			title: "stdin from reader (-) without diff",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Stdin:     "-",
+				Reader:    bytes.NewBufferString("hello from stdin\n"),
+			},
+			args: []string{"cat"},
+			want: "",
+		},
+		{
+			title: "stdin from reader (-) with diff via sed",
+			c: &config.Config{
+				Diff:            "diff",
+				Shell:           "bash",
+				Delimiter:       "--",
+				Stdin:           "-",
+				Reader:          bytes.NewBufferString("hello world\n"),
+				LeftPreprocess:  []string{`sed 's|world|left|'`},
+				RightPreprocess: []string{`sed 's|world|right|'`},
+			},
+			args: []string{"cat"},
+			want: `1c1
+< hello left
+---
+> hello right
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "stdin from file (@) without diff",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "input.txt")
+				_ = os.WriteFile(f, []byte("file content\n"), 0644)
+				return &config.Config{
+					Diff:      "diff",
+					Shell:     "bash",
+					Delimiter: "--",
+					Stdin:     "@" + f,
+				}
+			}(),
+			args: []string{"cat"},
+			want: "",
+		},
+		{
+			title: "stdin from file (@) with diff via grep",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "input.txt")
+				_ = os.WriteFile(f, []byte("alpha\nbeta\n"), 0644)
+				return &config.Config{
+					Diff:      "diff",
+					Shell:     "bash",
+					Delimiter: "--",
+					Stdin:     "@" + f,
+				}
+			}(),
+			args: []string{"grep", "--", "alpha", "--", "beta"},
+			want: `1c1
+< alpha
+---
+> beta
+`,
+			errMsg: "exit status 1",
+		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			var out bytes.Buffer

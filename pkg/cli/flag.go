@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 
 	"github.com/berquerant/cmdcomp/pkg/slicex"
 	"github.com/berquerant/cmdcomp/version"
@@ -87,6 +88,9 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 	}
 	c := &merged
 
+	if c.Reader == nil {
+		c.Reader = os.Stdin
+	}
 	c.Writer = stdout
 	c.SetupLogger(stderr)
 	slog.Debug("parse args", slog.Any("args", before))

@@ -16,6 +16,7 @@ import (
 type e2eTestCase struct {
 	title      string
 	arg        string // flags and arguments passed to bin (e.g. "-x 'diff -u' -- echo -- a -- b")
+	stdin      string // standard input to pass to the command
 	want       string
 	wantStderr string
 	wantStatus int
@@ -26,7 +27,15 @@ func (tc e2eTestCase) run(t *testing.T, bin string) {
 	t.Run(tc.title, func(t *testing.T) {
 		t.Run("direct", func(t *testing.T) {
 			var got, gotErr bytes.Buffer
-			err := runWithStderr(t, &got, &gotErr, "bash", "-c", bin+" "+tc.arg)
+			c := exec.Command("bash", "-c", bin+" "+tc.arg)
+			c.Dir = "../.."
+			c.Stdout = &got
+			c.Stderr = &gotErr
+			if tc.stdin != "" {
+				c.Stdin = bytes.NewBufferString(tc.stdin)
+			}
+			t.Logf("run:%v", c.Args)
+			err := c.Run()
 			if tc.wantStatus == 0 {
 				assert.Nil(t, err)
 			} else {
@@ -50,6 +59,9 @@ func (tc e2eTestCase) run(t *testing.T, bin string) {
 				}
 				var got bytes.Buffer
 				cmd := exec.Command("bash", "-c", script.String())
+				if tc.stdin != "" {
+					cmd.Stdin = bytes.NewBufferString(tc.stdin)
+				}
 				cmd.Stdout = &got
 				cmd.Stderr = os.Stderr
 				_ = cmd.Run() // ignore exit code; only stdout content is compared
@@ -266,6 +278,37 @@ echo "${X}=${Y}"
 			wantStatus: 2,
 			wantStderr: "run right",
 			skipDryrun: true,
+		},
+		{
+			title: "stdin from reader (-) without diff",
+			arg:   `--stdin - -- cat`,
+			stdin: "hello from stdin\n",
+			want:  "",
+		},
+		{
+			title: "stdin from reader (-) with diff via sed",
+			arg:   `--stdin - -p "sed 's|world|left|'" --right-preprocess "sed 's|left|right|'" -- cat`,
+			stdin: "hello world\n",
+			want: `1c1
+< hello left
+---
+> hello right
+`,
+			wantStatus: 1,
+		},
+		{
+			title: "stdin from file (@) with diff via grep",
+			arg: func() string {
+				f := filepath.Join(t.TempDir(), "input.txt")
+				_ = os.WriteFile(f, []byte("alpha\nbeta\n"), 0644)
+				return fmt.Sprintf(`--stdin '@%s' -- grep -- alpha -- beta`, f)
+			}(),
+			want: `1c1
+< alpha
+---
+> beta
+`,
+			wantStatus: 1,
 		},
 	} {
 		tc.run(t, bin)
