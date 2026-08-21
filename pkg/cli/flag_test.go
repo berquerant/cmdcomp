@@ -197,8 +197,22 @@ func TestParseConfig_Env(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "@data.txt", got.Stdin)
 
+		// left-stdin and right-stdin
+		got, err = cli.ParseConfig([]string{"--left-stdin", "-", "--right-stdin", "@data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
+		assert.Nil(t, err)
+		assert.Equal(t, "-", got.LeftStdin)
+		assert.Equal(t, "@data.txt", got.RightStdin)
+		assert.Equal(t, "-", got.GetLeftStdin())
+		assert.Equal(t, "@data.txt", got.GetRightStdin())
+
 		// raw filename without '@' is invalid
 		_, err = cli.ParseConfig([]string{"--stdin", "data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
 		assert.ErrorContains(t, err, "invalid stdin 'data.txt': must be '-' or '@filename'")
+
+		_, err = cli.ParseConfig([]string{"--left-stdin", "data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
+		assert.ErrorContains(t, err, "invalid left-stdin 'data.txt': must be '-' or '@filename'")
+
+		_, err = cli.ParseConfig([]string{"--right-stdin", "data.txt", "--", "echo", "x"}, os.Stdout, os.Stderr)
+		assert.ErrorContains(t, err, "invalid right-stdin 'data.txt': must be '-' or '@filename'")
 	})
 }

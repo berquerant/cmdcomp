@@ -63,7 +63,11 @@ func (r *runner) run(ctx context.Context) (resultErr error) {
 		_ = r.Config.Close()
 	}()
 
-	stdinRef, err := r.exec.SetupStdin(ctx, r.Config.Stdin, r.Config.Reader)
+	stdinRes, err := r.exec.SetupStdin(ctx, StdinSetupRequest{
+		LeftStdin:  r.Config.GetLeftStdin(),
+		RightStdin: r.Config.GetRightStdin(),
+		Reader:     r.Config.Reader,
+	})
 	if err != nil {
 		return err
 	}
@@ -72,7 +76,7 @@ func (r *runner) run(ctx context.Context) (resultErr error) {
 		return err
 	}
 
-	result, err := r.runGenCmds(ctx, stdinRef)
+	result, err := r.runGenCmds(ctx, stdinRes)
 	if err != nil {
 		return err
 	}
@@ -101,15 +105,15 @@ func (r *runner) runHooks(ctx context.Context, phase string, cmds []string) erro
 	return nil
 }
 
-func (r *runner) runGenCmds(ctx context.Context, stdinRef FileRef) (*genResult, error) {
+func (r *runner) runGenCmds(ctx context.Context, stdinRes *StdinSetupResult) (*genResult, error) {
 	if len(r.Config.Interceptor) > 0 {
-		return r.runGenCmdsWithInterceptor(ctx, stdinRef)
+		return r.runGenCmdsWithInterceptor(ctx, stdinRes)
 	}
-	return r.runGenCmdsConcurrently(ctx, stdinRef)
+	return r.runGenCmdsConcurrently(ctx, stdinRes)
 }
 
 // runGenCmdsConcurrently runs left and right commands in parallel when no interceptor is set.
-func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRef FileRef) (*genResult, error) {
+func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *StdinSetupResult) (*genResult, error) {
 	var (
 		leftRef, rightRef FileRef
 		eg, _             = errgroup.WithContext(ctx)
@@ -119,7 +123,7 @@ func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRef FileRef) (
 			Name:     "left",
 			ExtraEnv: r.Config.GetLeftEnv(),
 			Args:     r.Config.GetLeftArgs(),
-			Stdin:    stdinRef,
+			Stdin:    stdinRes.LeftRef,
 		})
 		if err != nil {
 			return err
@@ -132,7 +136,7 @@ func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRef FileRef) (
 			Name:     "right",
 			ExtraEnv: r.Config.GetRightEnv(),
 			Args:     r.Config.GetRightArgs(),
-			Stdin:    stdinRef,
+			Stdin:    stdinRes.RightRef,
 		})
 		if err != nil {
 			return err
@@ -147,12 +151,12 @@ func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRef FileRef) (
 }
 
 // runGenCmdsWithInterceptor runs left, interceptors, then right sequentially.
-func (r *runner) runGenCmdsWithInterceptor(ctx context.Context, stdinRef FileRef) (*genResult, error) {
+func (r *runner) runGenCmdsWithInterceptor(ctx context.Context, stdinRes *StdinSetupResult) (*genResult, error) {
 	leftRef, err := r.exec.RunGenCmd(ctx, GenCmdRequest{
 		Name:     "left",
 		ExtraEnv: r.Config.GetLeftEnv(),
 		Args:     r.Config.GetLeftArgs(),
-		Stdin:    stdinRef,
+		Stdin:    stdinRes.LeftRef,
 	})
 	if err != nil {
 		return nil, err
@@ -164,7 +168,7 @@ func (r *runner) runGenCmdsWithInterceptor(ctx context.Context, stdinRef FileRef
 		Name:     "right",
 		ExtraEnv: r.Config.GetRightEnv(),
 		Args:     r.Config.GetRightArgs(),
-		Stdin:    stdinRef,
+		Stdin:    stdinRes.RightRef,
 	})
 	if err != nil {
 		return nil, err

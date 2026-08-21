@@ -310,6 +310,27 @@ echo "${X}=${Y}"
 `,
 			wantStatus: 1,
 		},
+		{
+			title: "left-stdin overrides stdin in e2e",
+			arg: func() string {
+				f := filepath.Join(t.TempDir(), "left.txt")
+				_ = os.WriteFile(f, []byte("left file content\n"), 0644)
+				return fmt.Sprintf(`--stdin - --left-stdin '@%s' -- cat`, f)
+			}(),
+			stdin: "stdin content\n",
+			want: `1c1
+< left file content
+---
+> stdin content
+`,
+			wantStatus: 1,
+		},
+		{
+			title: "left-stdin (-) and right-stdin (-) in e2e",
+			arg:   `--left-stdin - --right-stdin - -- cat`,
+			stdin: "shared input\n",
+			want:  "",
+		},
 	} {
 		tc.run(t, bin)
 	}

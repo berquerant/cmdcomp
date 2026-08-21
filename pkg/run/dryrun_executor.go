@@ -95,23 +95,39 @@ type literalFileRef struct{ path string }
 
 func (r literalFileRef) ShellExpr() string { return shellQuote(r.path) }
 
-func (e *DryRunExecutor) SetupStdin(_ context.Context, stdin string, _ io.Reader) (FileRef, error) {
-	if stdin == "" {
-		return nil, nil
-	}
-	if after, ok := strings.CutPrefix(stdin, "@"); ok {
-		path := after
-		return literalFileRef{path: path}, nil
-	}
-	if stdin == "-" {
+func (e *DryRunExecutor) SetupStdin(_ context.Context, req StdinSetupRequest) (*StdinSetupResult, error) {
+	var stdinRef FileRef
+	if req.LeftStdin == "-" || req.RightStdin == "-" {
 		e.mu.Lock()
-		defer e.mu.Unlock()
 		fmt.Fprintf(e.w, "\n# stdin\n")
 		fmt.Fprintln(e.w, `_CMDCOMP_STDIN=$(mktemp "$_CMDCOMP_TMPDIR/stdin.XXXXXX")`)
 		fmt.Fprintln(e.w, `cat > "$_CMDCOMP_STDIN"`)
-		return varFileRef{varName: "_CMDCOMP_STDIN"}, nil
+		e.mu.Unlock()
+		stdinRef = varFileRef{varName: "_CMDCOMP_STDIN"}
 	}
-	return nil, fmt.Errorf("invalid stdin '%s'", stdin)
+
+	resolve := func(val string) (FileRef, error) {
+		if val == "" {
+			return nil, nil
+		}
+		if val == "-" {
+			return stdinRef, nil
+		}
+		if after, ok := strings.CutPrefix(val, "@"); ok {
+			return literalFileRef{path: after}, nil
+		}
+		return nil, fmt.Errorf("invalid stdin '%s'", val)
+	}
+
+	leftRef, err := resolve(req.LeftStdin)
+	if err != nil {
+		return nil, err
+	}
+	rightRef, err := resolve(req.RightStdin)
+	if err != nil {
+		return nil, err
+	}
+	return &StdinSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
 }
 
 func (e *DryRunExecutor) RunHook(_ context.Context, req HookRequest) error {

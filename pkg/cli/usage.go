@@ -162,7 +162,7 @@ cmdcomp executes subcommands and pipelines in the following order:
 {{.LifecycleCode}}
 
 1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
-2. **stdin setup**: If '--stdin' is specified, input from stdin ('-') or file ('@filename') is captured and replicated to both left and right commands.
+2. **stdin setup**: If '--stdin', '--left-stdin', or '--right-stdin' is specified, input from stdin ('-') or files ('@filename') is prepared for left and right commands (individual '--left-stdin' / '--right-stdin' takes precedence over '--stdin').
 3. **left command & right command**:
    - Without interceptor: Left and right commands run concurrently.
    - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.

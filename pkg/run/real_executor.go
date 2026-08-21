@@ -91,33 +91,50 @@ func (e *RealExecutor) logCmd(cl *cmdLog) {
 	}
 }
 
-func (e *RealExecutor) SetupStdin(ctx context.Context, stdin string, r io.Reader) (FileRef, error) {
-	if stdin == "" {
-		return nil, nil
-	}
-	if after, ok := strings.CutPrefix(stdin, "@"); ok {
-		path := after
-		if _, err := os.Stat(path); err != nil {
-			return nil, fmt.Errorf("%w: stat stdin file %s", err, path)
-		}
-		return pathFileRef{path: path}, nil
-	}
-	if stdin == "-" {
+func (e *RealExecutor) SetupStdin(ctx context.Context, req StdinSetupRequest) (*StdinSetupResult, error) {
+	var stdinRef FileRef
+	if req.LeftStdin == "-" || req.RightStdin == "-" {
 		tmpfile := execx.NewTmpFile(e.tmpDir)
 		f, err := tmpfile.Open()
 		if err != nil {
 			return nil, fmt.Errorf("%w: create tempfile for stdin", err)
 		}
 		defer f.Close()
+		r := req.Reader
 		if r == nil {
 			r = os.Stdin
 		}
 		if _, err := io.Copy(f, r); err != nil {
 			return nil, fmt.Errorf("%w: copy stdin to tempfile", err)
 		}
-		return pathFileRef{path: tmpfile.Path()}, nil
+		stdinRef = pathFileRef{path: tmpfile.Path()}
 	}
-	return nil, fmt.Errorf("invalid stdin '%s'", stdin)
+
+	resolve := func(val string) (FileRef, error) {
+		if val == "" {
+			return nil, nil
+		}
+		if val == "-" {
+			return stdinRef, nil
+		}
+		if after, ok := strings.CutPrefix(val, "@"); ok {
+			if _, err := os.Stat(after); err != nil {
+				return nil, fmt.Errorf("%w: stat stdin file %s", err, after)
+			}
+			return pathFileRef{path: after}, nil
+		}
+		return nil, fmt.Errorf("invalid stdin '%s'", val)
+	}
+
+	leftRef, err := resolve(req.LeftStdin)
+	if err != nil {
+		return nil, err
+	}
+	rightRef, err := resolve(req.RightStdin)
+	if err != nil {
+		return nil, err
+	}
+	return &StdinSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
 }
 
 func (e *RealExecutor) RunHook(ctx context.Context, req HookRequest) error {

@@ -557,6 +557,41 @@ i2
 `,
 			errMsg: "exit status 1",
 		},
+		{
+			title: "left-stdin overrides stdin",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "file.txt")
+				_ = os.WriteFile(f, []byte("file content\n"), 0644)
+				return &config.Config{
+					Diff:      "diff",
+					Shell:     "bash",
+					Delimiter: "--",
+					Stdin:     "-",
+					LeftStdin: "@" + f,
+					Reader:    bytes.NewBufferString("stdin content\n"),
+				}
+			}(),
+			args: []string{"cat"},
+			want: `1c1
+< file content
+---
+> stdin content
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "left-stdin (-) and right-stdin (-) both resolve stdin",
+			c: &config.Config{
+				Diff:       "diff",
+				Shell:      "bash",
+				Delimiter:  "--",
+				LeftStdin:  "-",
+				RightStdin: "-",
+				Reader:     bytes.NewBufferString("shared input\n"),
+			},
+			args: []string{"cat"},
+			want: "",
+		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			var out bytes.Buffer

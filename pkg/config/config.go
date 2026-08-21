@@ -37,6 +37,8 @@ type Config struct {
 	RightEnv        []string      `name:"right-env" split:"true" sep:"," usage:"environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"right-env,omitempty"`
 	Cleanup         []string      `name:"cleanup" short:"c" split:"true" sep:"\n" usage:"command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines" yaml:"cleanup,omitempty"`
 	Stdin           string        `name:"stdin" usage:"pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)" yaml:"stdin,omitempty"`
+	LeftStdin       string        `name:"left-stdin" usage:"pass input to stdin of left command only ('-' for stdin, '@filename' for file)" yaml:"left-stdin,omitempty"`
+	RightStdin      string        `name:"right-stdin" usage:"pass input to stdin of right command only ('-' for stdin, '@filename' for file)" yaml:"right-stdin,omitempty"`
 
 	CommonArgs []string `name:"-" yaml:"common-args,omitempty"`
 	LeftArgs   []string `name:"-" yaml:"left-args,omitempty"`
@@ -68,10 +70,31 @@ func (c *Config) Init(args []string) error {
 }
 
 func (c *Config) validateStdin() error {
-	if c.Stdin == "" || c.Stdin == "-" || strings.HasPrefix(c.Stdin, "@") {
-		return nil
+	for name, val := range map[string]string{
+		"stdin":       c.Stdin,
+		"left-stdin":  c.LeftStdin,
+		"right-stdin": c.RightStdin,
+	} {
+		if val == "" || val == "-" || strings.HasPrefix(val, "@") {
+			continue
+		}
+		return fmt.Errorf("%w: invalid %s '%s': must be '-' or '@filename'", ErrConfig, name, val)
 	}
-	return fmt.Errorf("%w: invalid stdin '%s': must be '-' or '@filename'", ErrConfig, c.Stdin)
+	return nil
+}
+
+func (c Config) GetLeftStdin() string {
+	if c.LeftStdin != "" {
+		return c.LeftStdin
+	}
+	return c.Stdin
+}
+
+func (c Config) GetRightStdin() string {
+	if c.RightStdin != "" {
+		return c.RightStdin
+	}
+	return c.Stdin
 }
 
 func (c *Config) Close() error {

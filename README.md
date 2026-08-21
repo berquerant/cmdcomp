@@ -38,7 +38,7 @@ cmdcomp executes subcommands and pipelines in the following order:
 ```
 
 1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
-2. **stdin setup**: If '--stdin' is specified, input from stdin ('-') or file ('@filename') is captured and replicated to both left and right commands.
+2. **stdin setup**: If '--stdin', '--left-stdin', or '--right-stdin' is specified, input from stdin ('-') or files ('@filename') is prepared for left and right commands (individual '--left-stdin' / '--right-stdin' takes precedence over '--stdin').
 3. **left command & right command**:
    - Without interceptor: Left and right commands run concurrently.
    - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.
@@ -282,11 +282,13 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -l, --label                          pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
       --left-env stringArray           environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
       --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+      --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
   -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
       --preset string                  name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff')
       --process-timeout duration       maximum timeout for each individual subcommand execution (e.g. '10s', '1m')
       --right-env stringArray          environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
       --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+      --right-stdin string             pass input to stdin of right command only ('-' for stdin, '@filename' for file)
   -S, --shell string                   shell executable used to run subcommands (default "bash")
       --show-cmd-log                   print stdout and stderr of executed subcommands to log output
   -s, --startup stringArray            command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines
