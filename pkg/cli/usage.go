@@ -157,6 +157,12 @@ then
 
 {{.SentryShellCode}}
 
+## Exit Codes
+
+- 0: No diff detected, dryrun, version/help displayed, or diff detected with --success.
+- 1: Diff detected (exit code of diff command).
+- 2: Process failure (command error, hook error, pipeline error, timeout, config/flag error). Always returns 2 even if --success is specified.
+
 ## Flags
 
 `

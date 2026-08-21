@@ -36,6 +36,6 @@ func main() {
 func fail(err error) {
 	if err != nil {
 		slog.Error("exit", slog.Any("err", err))
-		os.Exit(1)
+		os.Exit(2)
 	}
 }

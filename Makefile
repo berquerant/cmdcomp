@@ -12,6 +12,10 @@ $(BIN):
 test:
 	$(GOTEST) ./...
 
+.PHONY: golden
+golden:
+	go test ./pkg/cli -update-golden
+
 .PHONY: init
 init:
 	$(GOMOD) tidy -v
