@@ -1,6 +1,5 @@
 # cmdcomp
 
-````
 cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
 
 ## Usage
@@ -335,6 +334,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
 
 ## Flags
 
+```
   -c, --cleanup stringArray            command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines
       --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
       --debug                          enable debug log output
@@ -364,7 +364,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
       --timeout duration               maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')
       --version                        display version and exit
   -w, --work-dir string                working directory for temporary output files. When specified, temporary files are preserved after execution
-````
+```
 
 ## Install
 
