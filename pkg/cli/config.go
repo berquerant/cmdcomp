@@ -20,19 +20,8 @@ func newDefaultConfig() *Config {
 	}
 }
 
-type Preset struct {
-	Config  config.Config `yaml:"config"`
-	Success bool          `yaml:"success,omitempty"`
-}
-
-func (p *Preset) ToConfig() *Config {
-	c := p.Config
-	c.Success = p.Success
-	return &c
-}
-
 type ConfigSet struct {
-	Presets map[string]*Preset `yaml:"presets"`
+	Presets map[string]*Config `yaml:"presets"`
 }
 
 func (c *ConfigSet) Find(name string) (*Config, bool) {
@@ -40,12 +29,12 @@ func (c *ConfigSet) Find(name string) (*Config, bool) {
 	if !ok {
 		return nil, false
 	}
-	return x.ToConfig(), true
+	return x, true
 }
 
 func (c *ConfigSet) merge(x *ConfigSet) *ConfigSet {
 	if c.Presets == nil {
-		c.Presets = map[string]*Preset{}
+		c.Presets = map[string]*Config{}
 	}
 	maps.Copy(c.Presets, x.Presets)
 	return c
@@ -100,67 +89,65 @@ func loadConfigSet(path string) (*ConfigSet, error) {
 func applyDefaultValuesToConfigSet(cs *ConfigSet) {
 	dc := newDefaultConfig()
 	for _, p := range cs.Presets {
-		if p.Config.Diff == "" {
-			p.Config.Diff = dc.Diff
+		if p.Diff == "" {
+			p.Diff = dc.Diff
 		}
-		if p.Config.Delimiter == "" {
-			p.Config.Delimiter = dc.Delimiter
+		if p.Delimiter == "" {
+			p.Delimiter = dc.Delimiter
 		}
-		if p.Config.Shell == "" {
-			p.Config.Shell = dc.Shell
+		if p.Shell == "" {
+			p.Shell = dc.Shell
 		}
 	}
 }
 
 func newConfigExample() *ConfigSet {
 	return &ConfigSet{
-		Presets: map[string]*Preset{
-			"example": &Preset{
-				Success: true,
-				Config: config.Config{
-					ShowCmdLog: true,
-					Debug:      true,
-					Startup: []string{
-						"echo startup",
-					},
-					Interceptor: []string{
-						"echo interceptor",
-					},
-					Preprocess: []string{
-						"grep common",
-					},
-					LeftPreprocess: []string{
-						"grep left",
-					},
-					RightPreprocess: []string{
-						"grep right",
-					},
-					Diff:      "diff",
-					WorkDir:   "workdir",
-					Shell:     "bash",
-					Delimiter: "--",
-					UseLabel:  true,
-					Env: []string{
-						"X=1",
-					},
-					LeftEnv: []string{
-						"Y=2",
-					},
-					RightEnv: []string{
-						"Y=3",
-					},
-					Cleanup: []string{
-						"echo cleanup",
-					},
-					CommonArgs: []string{
-						"echo",
-					},
-					LeftArgs: []string{
-						"common left",
-					},
-					RightArgs: []string{
-						"common right",
-					},
+		Presets: map[string]*Config{
+			"example": &Config{
+				Success:    true,
+				ShowCmdLog: true,
+				Debug:      true,
+				Startup: []string{
+					"echo startup",
+				},
+				Interceptor: []string{
+					"echo interceptor",
+				},
+				Preprocess: []string{
+					"grep common",
+				},
+				LeftPreprocess: []string{
+					"grep left",
+				},
+				RightPreprocess: []string{
+					"grep right",
+				},
+				Diff:      "diff",
+				WorkDir:   "workdir",
+				Shell:     "bash",
+				Delimiter: "--",
+				UseLabel:  true,
+				Env: []string{
+					"X=1",
+				},
+				LeftEnv: []string{
+					"Y=2",
+				},
+				RightEnv: []string{
+					"Y=3",
+				},
+				Cleanup: []string{
+					"echo cleanup",
+				},
+				CommonArgs: []string{
+					"echo",
+				},
+				LeftArgs: []string{
+					"common left",
+				},
+				RightArgs: []string{
+					"common right",
 				},
 			},
 		},

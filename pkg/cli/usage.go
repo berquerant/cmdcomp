@@ -113,9 +113,8 @@ cmdcomp --preset json -- ...`)
 func (u UsageBuilder) configExamplesCode() string {
 	return u.code("yaml", `presets:
   sentry:
-    config:
-      diff: objdiff -cv
-      common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]`)
+    diff: objdiff -cv
+    common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]`)
 }
 
 func (u UsageBuilder) sentryShellCode() string {

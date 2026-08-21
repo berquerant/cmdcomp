@@ -73,6 +73,8 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		return nil, err
 	}
 
+	// Layered configuration merge order:
+	// Precedence: baseConfig (default or preset) < envConfig (CMDCOMP_*) < cliConfig (CLI flags)
 	merger := structconfig.NewMerger[Config]()
 	baseAndEnv, err := merger.Merge(*baseConfig, envConfig)
 	if err != nil {

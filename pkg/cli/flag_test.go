@@ -13,9 +13,8 @@ import (
 func TestParseConfig(t *testing.T) {
 	const base = `presets:
   base:
-    config:
-      preprocess:
-        - grep base`
+    preprocess:
+      - grep base`
 
 	configPath := filepath.Join(t.TempDir(), "base.yml")
 	if !assert.Nil(t, os.WriteFile(configPath, []byte(base), 0644)) {

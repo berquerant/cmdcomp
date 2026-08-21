@@ -20,6 +20,7 @@ type Config struct {
 	ShowCmdLog      bool          `name:"show-cmd-log" usage:"print stdout and stderr of executed subcommands to log output" yaml:"show-cmd-log,omitempty"`
 	Debug           bool          `name:"debug" usage:"enable debug log output" yaml:"debug,omitempty"`
 	DryRun          bool          `name:"dry-run" usage:"print generated bash script capturing the full execution pipeline without executing commands" yaml:"dry-run,omitempty"`
+	// Command list hooks: separated by newline (\n) in env vars to allow quotes/delimiters in scripts safely.
 	Startup         []string      `name:"startup" short:"s" split:"true" sep:"\n" usage:"command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"startup,omitempty"`
 	Interceptor     []string      `name:"interceptor" short:"i" split:"true" sep:"\n" usage:"command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"interceptor,omitempty"`
 	Preprocess      []string      `name:"preprocess" short:"p" split:"true" sep:"\n" usage:"filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"preprocess,omitempty"`
@@ -30,6 +31,7 @@ type Config struct {
 	Shell           string        `name:"shell" short:"S" default:"bash" usage:"shell executable used to run subcommands" yaml:"shell,omitempty"`
 	Delimiter       string        `name:"delimiter" short:"d" default:"--" usage:"delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---')" yaml:"delimiter,omitempty"`
 	UseLabel        bool          `name:"label" short:"l" usage:"pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)" yaml:"label,omitempty"`
+	// Environment variable pairs (KEY=VALUE): separated by comma (,) in env vars.
 	Env             []string      `name:"env" short:"e" split:"true" sep:"," usage:"environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"env,omitempty"`
 	LeftEnv         []string      `name:"left-env" split:"true" sep:"," usage:"environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"left-env,omitempty"`
 	RightEnv        []string      `name:"right-env" split:"true" sep:"," usage:"environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"right-env,omitempty"`

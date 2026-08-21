@@ -74,38 +74,37 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
 ```yaml
 presets:
   example:
-    config:
-      show-cmd-log: true
-      debug: true
-      startup:
-        - echo startup
-      interceptor:
-        - echo interceptor
-      preprocess:
-        - grep common
-      left-preprocess:
-        - grep left
-      right-preprocess:
-        - grep right
-      diff: diff
-      work-dir: workdir
-      shell: bash
-      delimiter: --
-      label: true
-      env:
-        - X=1
-      left-env:
-        - Y=2
-      right-env:
-        - Y=3
-      cleanup:
-        - echo cleanup
-      common-args:
-        - echo
-      left-args:
-        - common left
-      right-args:
-        - common right
+    show-cmd-log: true
+    debug: true
+    startup:
+      - echo startup
+    interceptor:
+      - echo interceptor
+    preprocess:
+      - grep common
+    left-preprocess:
+      - grep left
+    right-preprocess:
+      - grep right
+    diff: diff
+    work-dir: workdir
+    shell: bash
+    delimiter: --
+    label: true
+    env:
+      - X=1
+    left-env:
+      - Y=2
+    right-env:
+      - Y=3
+    cleanup:
+      - echo cleanup
+    common-args:
+      - echo
+    left-args:
+      - common left
+    right-args:
+      - common right
     success: true
 ```
 
@@ -114,83 +113,75 @@ presets:
 ```yaml
 presets:
   dyff:
-    config:
-      diff: dyff between --omit-header --set-exit-code
-      shell: bash
-      delimiter: --
+    diff: dyff between --omit-header --set-exit-code
+    shell: bash
+    delimiter: --
   helm:
-    config:
-      startup:
-        - helm repo update
-      diff: objdiff -cv
-      shell: bash
-      delimiter: --
+    startup:
+      - helm repo update
+    diff: objdiff -cv
+    shell: bash
+    delimiter: --
   helm-chart:
-    config:
-      startup:
-        - helm repo update
-      preprocess:
-        - yq -P 'sort_keys(..)'
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
-      common-args:
-        - helm
-        - show
-        - chart
-        - $CHART
-      left-args:
-        - --version
-        - $LEFT
-      right-args:
-        - --version
-        - $RIGHT
+    startup:
+      - helm repo update
+    preprocess:
+      - yq -P 'sort_keys(..)'
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
+    common-args:
+      - helm
+      - show
+      - chart
+      - $CHART
+    left-args:
+      - --version
+      - $LEFT
+    right-args:
+      - --version
+      - $RIGHT
   helm-values:
-    config:
-      startup:
-        - helm repo update
-      preprocess:
-        - yq -P 'sort_keys(..)'
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
-      common-args:
-        - helm
-        - show
-        - values
-        - $CHART
-      left-args:
-        - --version
-        - $LEFT
-      right-args:
-        - --version
-        - $RIGHT
+    startup:
+      - helm repo update
+    preprocess:
+      - yq -P 'sort_keys(..)'
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
+    common-args:
+      - helm
+      - show
+      - values
+      - $CHART
+    left-args:
+      - --version
+      - $LEFT
+    right-args:
+      - --version
+      - $RIGHT
   json:
-    config:
-      preprocess:
-        - jq -S .
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
+    preprocess:
+      - jq -S .
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
   k8s:
-    config:
-      diff: objdiff -cv
-      shell: bash
-      delimiter: --
+    diff: objdiff -cv
+    shell: bash
+    delimiter: --
   k8s-clean:
-    config:
-      preprocess:
-        - yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'
-      diff: objdiff -cv
-      shell: bash
-      delimiter: --
+    preprocess:
+      - yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'
+    diff: objdiff -cv
+    shell: bash
+    delimiter: --
   yml:
-    config:
-      preprocess:
-        - yq -P 'sort_keys(..)'
-      diff: diff -u --color
-      shell: bash
-      delimiter: --
+    preprocess:
+      - yq -P 'sort_keys(..)'
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
 ```
 
 ### Usage
@@ -209,9 +200,8 @@ cmdcomp --preset json -- ...
 ```yaml
 presets:
   sentry:
-    config:
-      diff: objdiff -cv
-      common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
+    diff: objdiff -cv
+    common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
 ```
 
 then
