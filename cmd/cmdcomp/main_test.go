@@ -70,6 +70,14 @@ func TestE2E(t *testing.T) {
 		assert.Nil(t, run(t, os.Stdout, bin, "--version"))
 	})
 
+	t.Run("help", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		err := runWithStderr(t, &stdout, &stderr, bin, "--help")
+		assert.Nil(t, err)
+		assert.Empty(t, stderr.String())
+		assert.Contains(t, stdout.String(), "cmdcomp -- compare the output of two commands")
+	})
+
 	t.Run("delimiter", func(t *testing.T) {
 		for _, tc := range []e2eTestCase{
 			{
