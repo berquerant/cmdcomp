@@ -78,7 +78,7 @@ cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datad
 presets:
   example:
     config:
-      showCmdLog: true
+      show-cmd-log: true
       debug: true
       startup:
         - echo startup
@@ -86,28 +86,28 @@ presets:
         - echo interceptor
       preprocess:
         - grep common
-      leftPreprocess:
+      left-preprocess:
         - grep left
-      rightPreprocess:
+      right-preprocess:
         - grep right
       diff: diff
-      workDir: workdir
+      work-dir: workdir
       shell: bash
       delimiter: --
       label: true
       env:
         - X=1
-      leftEnv:
+      left-env:
         - Y=2
-      rightEnv:
+      right-env:
         - Y=3
       cleanup:
         - echo cleanup
-      commonArgs:
+      common-args:
         - echo
-      leftArgs:
+      left-args:
         - common left
-      rightArgs:
+      right-args:
         - common right
     success: true
 ```
@@ -137,15 +137,15 @@ presets:
       diff: diff -u --color
       shell: bash
       delimiter: --
-      commonArgs:
+      common-args:
         - helm
         - show
         - chart
         - $CHART
-      leftArgs:
+      left-args:
         - --version
         - $LEFT
-      rightArgs:
+      right-args:
         - --version
         - $RIGHT
   helm-values:
@@ -157,15 +157,15 @@ presets:
       diff: diff -u --color
       shell: bash
       delimiter: --
-      commonArgs:
+      common-args:
         - helm
         - show
         - values
         - $CHART
-      leftArgs:
+      left-args:
         - --version
         - $LEFT
-      rightArgs:
+      right-args:
         - --version
         - $RIGHT
   json:
@@ -214,7 +214,7 @@ presets:
   sentry:
     config:
       diff: objdiff -cv
-      commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
+      common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]
 ```
 
 then
@@ -223,7 +223,7 @@ then
 # helm template sentry/sentry --version 28.0.3 > leftfile
 # helm template sentry/sentry --version 29.5.1 > rightfile
 # objdiff -cv leftfile rightfile
-cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'
+cmdcomp --config CONFIG --preset sentry --left-env 'VERSION=28.0.3' --right-env 'VERSION=29.5.1'
 ```
 
 ## Exit Codes

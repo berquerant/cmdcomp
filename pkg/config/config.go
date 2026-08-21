@@ -17,32 +17,32 @@ var (
 )
 
 type Config struct {
-	ShowCmdLog      bool          `name:"show-cmd-log" usage:"show command logs" yaml:"showCmdLog,omitempty"`
+	ShowCmdLog      bool          `name:"show-cmd-log" usage:"show command logs" yaml:"show-cmd-log,omitempty"`
 	Debug           bool          `name:"debug" usage:"enable debug logs" yaml:"debug,omitempty"`
-	DryRun          bool          `name:"dry-run" usage:"print the shell commands that would be executed, then exit without running them" yaml:"dryrun,omitempty"`
+	DryRun          bool          `name:"dry-run" usage:"print the shell commands that would be executed, then exit without running them" yaml:"dry-run,omitempty"`
 	Startup         []string      `name:"startup" short:"s" usage:"process before running commands; invoked like 'startup'" yaml:"startup,omitempty"`
 	Interceptor     []string      `name:"interceptor" short:"i" usage:"process after left command and before right command; invoked like 'interceptor'" yaml:"interceptor,omitempty"`
 	Preprocess      []string      `name:"preprocess" short:"p" usage:"process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout" yaml:"preprocess,omitempty"`
-	LeftPreprocess  []string      `name:"left-preprocess" usage:"additional left process before diff; invoked like 'left-preprocess'; should read input from stdin; should output result to stdout" yaml:"leftPreprocess,omitempty"`
-	RightPreprocess []string      `name:"right-preprocess" usage:"additional right process before diff; invoked like 'right-preprocess'; should read input from stdin; should output result to stdout" yaml:"rightPreprocess,omitempty"`
+	LeftPreprocess  []string      `name:"left-preprocess" usage:"additional left process before diff; invoked like 'left-preprocess'; should read input from stdin; should output result to stdout" yaml:"left-preprocess,omitempty"`
+	RightPreprocess []string      `name:"right-preprocess" usage:"additional right process before diff; invoked like 'right-preprocess'; should read input from stdin; should output result to stdout" yaml:"right-preprocess,omitempty"`
 	Diff            string        `name:"diff" short:"x" default:"diff" usage:"diff command; invoked like 'diff LEFT_FILE RIGHT_FILE'" yaml:"diff,omitempty"`
-	WorkDir         string        `name:"work-dir" short:"w" usage:"working directory; keep temporary files" yaml:"workDir,omitempty"`
+	WorkDir         string        `name:"work-dir" short:"w" usage:"working directory; keep temporary files" yaml:"work-dir,omitempty"`
 	Shell           string        `name:"shell" short:"S" default:"bash" usage:"shell command to be executed" yaml:"shell,omitempty"`
 	Delimiter       string        `name:"delimiter" short:"d" default:"--" usage:"arguments delimiter;\nchange the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this" yaml:"delimiter,omitempty"`
 	UseLabel        bool          `name:"label" short:"l" usage:"use '--label' option of diff command" yaml:"label,omitempty"`
 	Env             []string      `name:"env" short:"e" usage:"process environment variables;\nPassed to all processes along with os.Environ.\n--left-env is also passed to left output and left preprocess.\n--right-env is also passed to right output and right preprocess." yaml:"env,omitempty"`
-	LeftEnv         []string      `name:"left-env" usage:"left process environment variables" yaml:"leftEnv,omitempty"`
-	RightEnv        []string      `name:"right-env" usage:"right process environment variables" yaml:"rightEnv,omitempty"`
+	LeftEnv         []string      `name:"left-env" usage:"left process environment variables" yaml:"left-env,omitempty"`
+	RightEnv        []string      `name:"right-env" usage:"right process environment variables" yaml:"right-env,omitempty"`
 	Cleanup         []string      `name:"cleanup" short:"c" usage:"process before exiting cmdcomp process; invoked like 'cleanup'" yaml:"cleanup,omitempty"`
 
-	CommonArgs []string `name:"-" yaml:"commonArgs,omitempty"`
-	LeftArgs   []string `name:"-" yaml:"leftArgs,omitempty"`
-	RightArgs  []string `name:"-" yaml:"rightArgs,omitempty"`
+	CommonArgs []string `name:"-" yaml:"common-args,omitempty"`
+	LeftArgs   []string `name:"-" yaml:"left-args,omitempty"`
+	RightArgs  []string `name:"-" yaml:"right-args,omitempty"`
 
 	Writer         io.Writer     `name:"-" json:"-" yaml:"-"`
 	TempDir        string        `name:"-" json:"-" yaml:"-"`
 	Timeout        time.Duration `name:"timeout" usage:"timeout for entire command execution" yaml:"timeout,omitempty"`
-	ProcessTimeout time.Duration `name:"process-timeout" usage:"timeout for each individual process execution" yaml:"processTimeout,omitempty"`
+	ProcessTimeout time.Duration `name:"process-timeout" usage:"timeout for each individual process execution" yaml:"process-timeout,omitempty"`
 }
 
 func (c *Config) Init(args []string) error {

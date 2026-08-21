@@ -115,14 +115,14 @@ func (u UsageBuilder) configExamplesCode() string {
   sentry:
     config:
       diff: objdiff -cv
-      commonArgs:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]`)
+      common-args:  ["helm", "template", "sentry/sentry", "--version", "$VERSION"]`)
 }
 
 func (u UsageBuilder) sentryShellCode() string {
 	return u.code("shell", `# helm template sentry/sentry --version 28.0.3 > leftfile
 # helm template sentry/sentry --version 29.5.1 > rightfile
 # objdiff -cv leftfile rightfile
-cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'VERSION=29.5.1'`)
+cmdcomp --config CONFIG --preset sentry --left-env 'VERSION=28.0.3' --right-env 'VERSION=29.5.1'`)
 }
 
 var rawUsageTemplate = `cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
