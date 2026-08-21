@@ -16,6 +16,11 @@ var (
 	ErrConfig = errors.New("Config")
 )
 
+const (
+	StdinMarker = "-"
+	FilePrefix  = "@"
+)
+
 type Config struct {
 	ShowCmdLog      bool          `name:"show-cmd-log" usage:"print stdout and stderr of executed subcommands to log output" yaml:"show-cmd-log,omitempty"`
 	Debug           bool          `name:"debug" usage:"enable debug log output" yaml:"debug,omitempty"`
@@ -64,10 +69,10 @@ type Config struct {
 }
 
 func (c *Config) Init(args []string) error {
-	if err := c.validateStdin(); err != nil {
+	if err := c.validateInputSources(); err != nil {
 		return err
 	}
-	if err := c.validateSnapshot(); err != nil {
+	if err := c.validateExclusivity(); err != nil {
 		return err
 	}
 	if err := c.setTempDir(); err != nil {
@@ -79,30 +84,35 @@ func (c *Config) Init(args []string) error {
 	return nil
 }
 
-func (c *Config) validateStdin() error {
+func (c *Config) validateInputSources() error {
 	for name, val := range map[string]string{
-		"stdin":       c.Stdin,
-		"left-stdin":  c.LeftStdin,
-		"right-stdin": c.RightStdin,
-	} {
-		if val == "" || val == "-" || strings.HasPrefix(val, "@") {
-			continue
-		}
-		return fmt.Errorf("%w: invalid %s '%s': must be '-' or '@filename'", ErrConfig, name, val)
-	}
-	return nil
-}
-
-func (c *Config) validateSnapshot() error {
-	for name, val := range map[string]string{
+		"stdin":          c.Stdin,
+		"left-stdin":     c.LeftStdin,
+		"right-stdin":    c.RightStdin,
 		"snapshot":       c.Snapshot,
 		"left-snapshot":  c.LeftSnapshot,
 		"right-snapshot": c.RightSnapshot,
 	} {
-		if val == "" || val == "-" || strings.HasPrefix(val, "@") {
-			continue
+		if err := validateInputSource(name, val); err != nil {
+			return err
 		}
-		return fmt.Errorf("%w: invalid %s '%s': must be '-' or '@filename'", ErrConfig, name, val)
+	}
+	return nil
+}
+
+func validateInputSource(name, val string) error {
+	if val == "" || val == StdinMarker || strings.HasPrefix(val, FilePrefix) {
+		return nil
+	}
+	return fmt.Errorf("%w: invalid %s '%s': must be '%s' or '%sfilename'", ErrConfig, name, val, StdinMarker, FilePrefix)
+}
+
+func (c *Config) validateExclusivity() error {
+	if c.GetLeftStdin() != "" && c.GetLeftSnapshot() != "" {
+		return fmt.Errorf("%w: stdin and snapshot cannot be used together for left command", ErrConfig)
+	}
+	if c.GetRightStdin() != "" && c.GetRightSnapshot() != "" {
+		return fmt.Errorf("%w: stdin and snapshot cannot be used together for right command", ErrConfig)
 	}
 	return nil
 }

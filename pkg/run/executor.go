@@ -58,33 +58,15 @@ type DiffRequest struct {
 	Right  FileRef
 }
 
-// StdinSetupRequest holds the parameters for setting up stdin inputs for left and right commands.
-type StdinSetupRequest struct {
-	LeftStdin  string
-	RightStdin string
-	Reader     io.Reader
+// SetupInputRequest holds parameters for setting up input sources (stdin or snapshot).
+type SetupInputRequest struct {
+	Left   string
+	Right  string
+	Reader io.Reader
 }
 
-// StdinSetupResult holds the resolved FileRefs for left and right stdin.
-type StdinSetupResult struct {
-	LeftRef  FileRef
-	RightRef FileRef
-}
-
-// SnapshotSetupRequest holds the parameters for setting up snapshot inputs.
-// A snapshot bypasses command execution and uses the given input directly as the command output.
-// '-' reads from the Reader (stdin); '@filename' reads from the specified file.
-// LeftSnapshot / RightSnapshot take precedence over Snapshot for the respective side.
-// If both resolve to '-', stdin is read once and shared.
-type SnapshotSetupRequest struct {
-	LeftSnapshot  string
-	RightSnapshot string
-	Reader        io.Reader
-}
-
-// SnapshotSetupResult holds the resolved FileRefs for left and right snapshots.
-// A nil FileRef means no snapshot is configured for that side (command should run normally).
-type SnapshotSetupResult struct {
+// SetupInputResult holds the resolved FileRefs for left and right sides.
+type SetupInputResult struct {
 	LeftRef  FileRef
 	RightRef FileRef
 }
@@ -98,10 +80,10 @@ type SnapshotSetupResult struct {
 // existing Executor methods grants dry-run support with no additional effort.
 // Adding fields to request structs extends behaviour without breaking callers.
 type Executor interface {
-	SetupStdin(ctx context.Context, req StdinSetupRequest) (*StdinSetupResult, error)
+	SetupStdin(ctx context.Context, req SetupInputRequest) (*SetupInputResult, error)
 	// SetupSnapshot resolves snapshot inputs for left and right sides.
 	// A nil FileRef in the result means no snapshot for that side.
-	SetupSnapshot(ctx context.Context, req SnapshotSetupRequest) (*SnapshotSetupResult, error)
+	SetupSnapshot(ctx context.Context, req SetupInputRequest) (*SetupInputResult, error)
 	RunHook(ctx context.Context, req HookRequest) error
 	RunGenCmd(ctx context.Context, req GenCmdRequest) (FileRef, error)
 	RunPipeline(ctx context.Context, req PipelineRequest) (FileRef, error)

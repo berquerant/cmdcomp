@@ -63,19 +63,19 @@ func (r *runner) run(ctx context.Context) (resultErr error) {
 		_ = r.Config.Close()
 	}()
 
-	stdinRes, err := r.exec.SetupStdin(ctx, StdinSetupRequest{
-		LeftStdin:  r.Config.GetLeftStdin(),
-		RightStdin: r.Config.GetRightStdin(),
-		Reader:     r.Config.Reader,
+	stdinRes, err := r.exec.SetupStdin(ctx, SetupInputRequest{
+		Left:   r.Config.GetLeftStdin(),
+		Right:  r.Config.GetRightStdin(),
+		Reader: r.Config.Reader,
 	})
 	if err != nil {
 		return err
 	}
 
-	snapRes, err := r.exec.SetupSnapshot(ctx, SnapshotSetupRequest{
-		LeftSnapshot:  r.Config.GetLeftSnapshot(),
-		RightSnapshot: r.Config.GetRightSnapshot(),
-		Reader:        r.Config.Reader,
+	snapRes, err := r.exec.SetupSnapshot(ctx, SetupInputRequest{
+		Left:   r.Config.GetLeftSnapshot(),
+		Right:  r.Config.GetRightSnapshot(),
+		Reader: r.Config.Reader,
 	})
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (r *runner) runHooks(ctx context.Context, phase string, cmds []string) erro
 	return nil
 }
 
-func (r *runner) runGenCmds(ctx context.Context, stdinRes *StdinSetupResult, snapRes *SnapshotSetupResult) (*genResult, error) {
+func (r *runner) runGenCmds(ctx context.Context, stdinRes *SetupInputResult, snapRes *SetupInputResult) (*genResult, error) {
 	if len(r.Config.Interceptor) > 0 {
 		return r.runGenCmdsWithInterceptor(ctx, stdinRes, snapRes)
 	}
@@ -123,7 +123,7 @@ func (r *runner) runGenCmds(ctx context.Context, stdinRes *StdinSetupResult, sna
 
 // runGenCmdsConcurrently runs left and right commands in parallel when no interceptor is set.
 // If a snapshot is configured for a side, command execution is skipped for that side.
-func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *StdinSetupResult, snapRes *SnapshotSetupResult) (*genResult, error) {
+func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *SetupInputResult, snapRes *SetupInputResult) (*genResult, error) {
 	var (
 		leftRef, rightRef FileRef
 		eg, _             = errgroup.WithContext(ctx)
@@ -170,7 +170,7 @@ func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *StdinSetu
 
 // runGenCmdsWithInterceptor runs left, interceptors, then right sequentially.
 // If a snapshot is configured for a side, command execution is skipped for that side.
-func (r *runner) runGenCmdsWithInterceptor(ctx context.Context, stdinRes *StdinSetupResult, snapRes *SnapshotSetupResult) (*genResult, error) {
+func (r *runner) runGenCmdsWithInterceptor(ctx context.Context, stdinRes *SetupInputResult, snapRes *SetupInputResult) (*genResult, error) {
 	var leftRef FileRef
 	if snapRes.LeftRef != nil {
 		leftRef = snapRes.LeftRef
