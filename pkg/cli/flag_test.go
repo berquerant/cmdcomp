@@ -153,7 +153,7 @@ func TestParseConfig(t *testing.T) {
 func TestParseConfig_Env(t *testing.T) {
 	t.Setenv("CMDCOMP_DIFF", "custom-diff")
 	t.Setenv("CMDCOMP_SHELL", "zsh")
-	t.Setenv("CMDCOMP_STARTUP", "echo s1, echo s2")
+	t.Setenv("CMDCOMP_STARTUP", "echo s1\necho s2")
 	t.Setenv("CMDCOMP_ENV", "K1=V1, K2=V2")
 	t.Setenv("CMDCOMP_TIMEOUT", "10s")
 	t.Setenv("CMDCOMP_PROCESS_TIMEOUT", "2s")
