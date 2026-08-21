@@ -232,36 +232,39 @@ cmdcomp --config CONFIG --preset sentry --left-env 'VERSION=28.0.3' --right-env 
 - 1: Diff detected (exit code of diff command).
 - 2: Process failure (command error, hook error, pipeline error, timeout, config/flag error). Always returns 2 even if --success is specified.
 
+## Environment Variables
+
+All flags can be specified via environment variables using the 'CMDCOMP_' prefix (e.g. CMDCOMP_DIFF, CMDCOMP_PRESET, CMDCOMP_SHOW_CMD_LOG).
+Precedence: Default/Preset < Environment Variables < Command-line Flags
+
+- Command lists (CMDCOMP_STARTUP, CMDCOMP_PREPROCESS, etc.): Separate multiple commands with newline.
+- Environment variable pairs (CMDCOMP_ENV, CMDCOMP_LEFT_ENV, CMDCOMP_RIGHT_ENV): Separate entries with comma (,).
+
 ## Flags
 
-  -c, --cleanup stringArray            process before exiting cmdcomp process; invoked like 'cleanup'
-      --config string                  config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir
-      --debug                          enable debug logs
-  -d, --delimiter string               arguments delimiter;
-                                       change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
-  -x, --diff string                    diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
-      --dry-run                        print the shell commands that would be executed, then exit without running them
-  -e, --env stringArray                process environment variables;
-                                       Passed to all processes along with os.Environ.
-                                       --left-env is also passed to left output and left preprocess.
-                                       --right-env is also passed to right output and right preprocess.
-  -i, --interceptor stringArray        process after left command and before right command; invoked like 'interceptor'
-  -l, --label                          use '--label' option of diff command
-      --left-env stringArray           left process environment variables
-      --left-preprocess stringArray    additional left process before diff; invoked like 'left-preprocess'; should read input from stdin; should output result to stdout
-  -p, --preprocess stringArray         process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
-      --preset string                  name of preset to be used
-      --process-timeout duration       timeout for each individual process execution
-      --right-env stringArray          right process environment variables
-      --right-preprocess stringArray   additional right process before diff; invoked like 'right-preprocess'; should read input from stdin; should output result to stdout
-  -S, --shell string                   shell command to be executed (default "bash")
-      --show-cmd-log                   show command logs
-  -s, --startup stringArray            process before running commands; invoked like 'startup'
-      --success                        exit successfully even if there are diffs;
-                                       in other words, succeed even if the diff command returns exit status 1
-      --timeout duration               timeout for entire command execution
-      --version                        display version
-  -w, --work-dir string                working directory; keep temporary files
+  -c, --cleanup stringArray            command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines
+      --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
+      --debug                          enable debug log output
+  -d, --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---') (default "--")
+  -x, --diff string                    diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c') (default "diff")
+      --dry-run                        print generated bash script capturing the full execution pipeline without executing commands
+  -e, --env stringArray                environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated
+  -i, --interceptor stringArray        command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines
+  -l, --label                          pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
+      --left-env stringArray           environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
+      --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+  -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
+      --preset string                  name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff')
+      --process-timeout duration       maximum timeout for each individual subcommand execution (e.g. '10s', '1m')
+      --right-env stringArray          environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
+      --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+  -S, --shell string                   shell executable used to run subcommands (default "bash")
+      --show-cmd-log                   print stdout and stderr of executed subcommands to log output
+  -s, --startup stringArray            command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines
+      --success                        exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2
+      --timeout duration               maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')
+      --version                        display version and exit
+  -w, --work-dir string                working directory for temporary output files. When specified, temporary files are preserved after execution
 ````
 
 ## Install

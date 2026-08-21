@@ -67,8 +67,14 @@ This document provides development instructions, project structure, architectura
    - `realExecutor` and `DryRunExecutor` implement the same interface. This ensures dry-run scripts and real executions never drift out of sync.
 2. **Sentinel Errors & Phase Context**:
    - Execution errors are tagged with sentinel errors (`run.ErrDiff`, `run.ErrHook`, `run.ErrGenCmd`, `run.ErrPipeline`) and wrapped with the phase name (e.g. `run left`, `run right`, `run startup[0]`, `run preprocess:left pipeline`).
-3. **Exit Code Conventions**:
-   - `0`: No diff detected, `--dryrun`, `--version`/`--help`, or diff detected with `--success`.
+3. **Configuration & Environment Variables**:
+   - `pkg/config/config.go` (`config.Config`) is the **single source of truth** for all runtime and CLI configuration options.
+   - CLI flags are in kebab-case (`--show-cmd-log`, `--dry-run`, `--left-preprocess`, etc.).
+   - All options can be configured via environment variables with prefix `CMDCOMP_` (e.g. `CMDCOMP_DIFF`, `CMDCOMP_SHOW_CMD_LOG`).
+   - Configuration Precedence: **Default/Preset < Environment Variables (`CMDCOMP_*`) < CLI Flags**.
+   - Slices for commands (`startup`, `interceptor`, `preprocess`, `cleanup`) use `sep:"\n"` for newline separation in env vars. Slices for env vars (`env`, `left-env`, `right-env`) use `sep:","`.
+4. **Exit Code Conventions**:
+   - `0`: No diff detected, `--dry-run`, `--version`/`--help`, or diff detected with `--success`.
    - `1`: Diff detected (diff command exited with 1).
    - `2`: Process failure (command failure, hook failure, pipeline failure, timeout, flag/config errors). Always exits with `2` even if `--success` is specified.
 
