@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 )
 
 // varFileRef represents a shell variable that holds a tmpdir-relative file path.
@@ -19,20 +20,33 @@ func (r varFileRef) ShellExpr() string { return fmt.Sprintf(`"$%s"`, r.varName) 
 // Because it implements Executor, any step routed through the interface
 // is automatically captured in the script — no per-feature dry-run code is needed.
 type DryRunExecutor struct {
-	mu    sync.Mutex
-	w     io.Writer
-	shell string
+	mu             sync.Mutex
+	w              io.Writer
+	shell          string
+	timeout        time.Duration
+	processTimeout time.Duration
 }
 
 // NewDryRunExecutor creates a DryRunExecutor and writes the script preamble immediately.
-func NewDryRunExecutor(shell string, w io.Writer) *DryRunExecutor {
-	e := &DryRunExecutor{shell: shell, w: w}
+func NewDryRunExecutor(shell string, w io.Writer, timeout, processTimeout time.Duration) *DryRunExecutor {
+	e := &DryRunExecutor{
+		shell:          shell,
+		w:              w,
+		timeout:        timeout,
+		processTimeout: processTimeout,
+	}
 	e.preamble()
 	return e
 }
 
 func (e *DryRunExecutor) preamble() {
 	fmt.Fprintf(e.w, "#!/usr/bin/env %s\n", e.shell)
+	if e.timeout > 0 {
+		fmt.Fprintf(e.w, "# timeout: %s\n", e.timeout)
+	}
+	if e.processTimeout > 0 {
+		fmt.Fprintf(e.w, "# processTimeout: %s\n", e.processTimeout)
+	}
 	fmt.Fprintln(e.w, "set -euo pipefail")
 	fmt.Fprintln(e.w, `_CMDCOMP_TMPDIR=$(mktemp -d)`)
 	fmt.Fprintln(e.w, `trap 'rm -rf "$_CMDCOMP_TMPDIR"' EXIT`)

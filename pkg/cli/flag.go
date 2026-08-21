@@ -39,6 +39,8 @@ in other words, succeed even if the diff command returns exit status 1`)
 		configPath = fs.String("config", "",
 			"config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir")
 		presetName                                  = fs.String("preset", "", "name of preset to be used")
+		timeout                                     = fs.Duration("timeout", 0, "timeout for entire command execution")
+		processTimeout                              = fs.Duration("processTimeout", 0, "timeout for each individual process execution")
 		startup, interceptor, cleanup               []string
 		preprocess, leftPreprocess, rightPreprocess []string
 		env, leftEnv, rightEnv                      []string
@@ -142,6 +144,10 @@ Passed to all processes along with os.Environ.
 			c.RightEnv = rightEnv
 		case "diff":
 			c.Diff = diff
+		case "timeout":
+			c.Timeout = *timeout
+		case "processTimeout":
+			c.ProcessTimeout = *processTimeout
 		}
 	})
 

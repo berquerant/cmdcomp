@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/berquerant/cmdcomp/pkg/run"
@@ -439,6 +440,56 @@ i2
 > b
 `,
 			errMsg: "exit status 1",
+		},
+		{
+			title: "total timeout exceeded in left process",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Timeout:   50 * time.Millisecond,
+			},
+			args:   []string{"bash", "-c", "--", "sleep 1", "--", "echo b"},
+			errMsg: "run left",
+		},
+		{
+			title: "process timeout exceeded in right process",
+			c: &config.Config{
+				Diff:           "diff",
+				Shell:          "bash",
+				Delimiter:      "--",
+				ProcessTimeout: 50 * time.Millisecond,
+			},
+			args:   []string{"bash", "-c", "--", "echo a", "--", "sleep 1"},
+			errMsg: "run right",
+		},
+		{
+			title: "process timeout exceeded in preprocess",
+			c: &config.Config{
+				Diff:           "diff",
+				Shell:          "bash",
+				Delimiter:      "--",
+				ProcessTimeout: 50 * time.Millisecond,
+				Preprocess: []string{
+					"sleep 1",
+				},
+			},
+			args:   []string{"echo", "--", "a", "--", "b"},
+			errMsg: "pipeline",
+		},
+		{
+			title: "cleanup runs even if process timeout is set",
+			c: &config.Config{
+				Diff:           "diff",
+				Shell:          "bash",
+				Delimiter:      "--",
+				ProcessTimeout: 50 * time.Millisecond,
+				Cleanup: []string{
+					"sleep 0.1",
+				},
+			},
+			args: []string{"echo", "--", "a", "--", "a"},
+			want: "",
 		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {

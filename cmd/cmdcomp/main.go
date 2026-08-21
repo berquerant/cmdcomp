@@ -20,12 +20,14 @@ func main() {
 	}
 
 	if err := run.Main(&c.Config); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			if c.Success && errors.Is(err, run.ErrDiff) && exitErr.ExitCode() == 1 {
-				return
+		if errors.Is(err, run.ErrDiff) {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
+				if c.Success && exitErr.ExitCode() == 1 {
+					return
+				}
+				os.Exit(exitErr.ExitCode())
 			}
-			os.Exit(exitErr.ExitCode())
 		}
 		fail(err)
 	}
