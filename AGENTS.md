@@ -105,6 +105,7 @@ make bin/cmdcomp
 
 ## 5. Coding & Testing Guidelines
 
+- **Table-Driven Tests**: Write test codes using table-driven tests unless there is a specific reason not to.
 - **Error Identification**: When adding new execution phases or modifying process spawning, ensure errors are wrapped with clear phase descriptions so users know exactly which command failed or timed out.
 - **Concurrency & Resource Safety**: Ensure temporary directories and open file handles are cleanly closed, and `defer` cleanup hooks are always run.
 
