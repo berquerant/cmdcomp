@@ -149,3 +149,36 @@ func TestParseConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestParseConfig_Env(t *testing.T) {
+	t.Setenv("CMDCOMP_DIFF", "custom-diff")
+	t.Setenv("CMDCOMP_SHELL", "zsh")
+	t.Setenv("CMDCOMP_STARTUP", "echo s1, echo s2")
+	t.Setenv("CMDCOMP_ENV", "K1=V1, K2=V2")
+	t.Setenv("CMDCOMP_TIMEOUT", "10s")
+	t.Setenv("CMDCOMP_PROCESS_TIMEOUT", "2s")
+
+	got, err := cli.ParseConfig([]string{"--", "echo", "x"}, os.Stdout, os.Stderr)
+	assert.Nil(t, err)
+	want := &cli.Config{
+		Diff:           "custom-diff",
+		Shell:          "zsh",
+		Delimiter:      "--",
+		Startup:        []string{"echo s1", "echo s2"},
+		Env:            []string{"K1=V1", "K2=V2"},
+		Timeout:        10 * time.Second,
+		ProcessTimeout: 2 * time.Second,
+		CommonArgs:     []string{"echo", "x"},
+	}
+	got.Writer = nil
+	got.TempDir = ""
+	assert.Equal(t, want, got)
+
+	// Test CLI flag overrides environment variable
+	t.Run("flag overrides env", func(t *testing.T) {
+		got, err := cli.ParseConfig([]string{"--diff", "flag-diff", "-S", "sh", "--", "echo", "x"}, os.Stdout, os.Stderr)
+		assert.Nil(t, err)
+		assert.Equal(t, "flag-diff", got.Diff)
+		assert.Equal(t, "sh", got.Shell)
+	})
+}

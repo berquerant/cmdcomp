@@ -494,6 +494,20 @@ echo "${X}=${Y}"
 			assert.Equal(t, "1c1\n< a\n---\n> b\n", diffOut.String())
 		})
 	})
+
+	t.Run("env vars", func(t *testing.T) {
+		t.Run("CMDCOMP_DIFF and CMDCOMP_ENV", func(t *testing.T) {
+			cmdStr := fmt.Sprintf(`CMDCOMP_DIFF='diff -u --label L --label R' CMDCOMP_ENV='X=x, Y=y' %s -- bash -c -- 'echo $X' -- 'echo $Y'`, bin)
+			var got bytes.Buffer
+			err := run(t, &got, "bash", "-c", cmdStr)
+			var exitErr *exec.ExitError
+			if !assert.True(t, errors.As(err, &exitErr)) {
+				return
+			}
+			assert.Equal(t, 1, exitErr.ExitCode())
+			assert.Equal(t, "--- L\n+++ R\n@@ -1 +1 @@\n-x\n+y\n", got.String())
+		})
+	})
 }
 
 func run(t *testing.T, stdout io.Writer, name string, arg ...string) error {

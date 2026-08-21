@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
+	"strings"
 
 	"github.com/berquerant/cmdcomp/pkg/slicex"
 	"github.com/berquerant/cmdcomp/version"
@@ -68,8 +70,18 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		baseConfig = newDefaultConfig()
 	}
 
+	var envConfig Config
+	if err := sc.FromEnv(&envConfig, structconfig.WithEnvPrefix("CMDCOMP_")); err != nil {
+		return nil, err
+	}
+	parseEnvStringSlices(&envConfig, "CMDCOMP_")
+
 	merger := structconfig.NewMerger[Config]()
-	merged, err := merger.Merge(*baseConfig, cliConfig)
+	baseAndEnv, err := merger.Merge(*baseConfig, envConfig)
+	if err != nil {
+		return nil, err
+	}
+	merged, err := merger.Merge(baseAndEnv, cliConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -93,3 +105,50 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 	return c, nil
 }
 
+func parseEnvStringSlices(c *Config, prefix string) {
+	fields := []struct {
+		envName string
+		target  *[]string
+	}{
+		{"STARTUP", &c.Startup},
+		{"INTERCEPTOR", &c.Interceptor},
+		{"PREPROCESS", &c.Preprocess},
+		{"LEFT_PREPROCESS", &c.LeftPreprocess},
+		{"RIGHT_PREPROCESS", &c.RightPreprocess},
+		{"ENV", &c.Env},
+		{"LEFT_ENV", &c.LeftEnv},
+		{"RIGHT_ENV", &c.RightEnv},
+		{"CLEANUP", &c.Cleanup},
+	}
+
+	for _, f := range fields {
+		v, ok := os.LookupEnv(prefix + f.envName)
+		if !ok || v == "" {
+			continue
+		}
+		*f.target = splitEnvSlice(v)
+	}
+}
+
+func splitEnvSlice(s string) []string {
+	// If newline is present, split by newline
+	if strings.Contains(s, "\n") {
+		var res []string
+		for line := range strings.SplitSeq(s, "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				res = append(res, line)
+			}
+		}
+		return res
+	}
+	// Otherwise split by comma
+	var res []string
+	for item := range strings.SplitSeq(s, ",") {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			res = append(res, item)
+		}
+	}
+	return res
+}
