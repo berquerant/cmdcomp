@@ -106,6 +106,7 @@ make bin/cmdcomp
 ## 5. Coding & Testing Guidelines
 
 - **Table-Driven Tests**: Write test codes using table-driven tests unless there is a specific reason not to.
+- **Separate Commits for Refactoring**: Test code refactoring and production code refactoring MUST NOT be done in the same commit. Always separate test refactoring and production code refactoring into distinct commits.
 - **Error Identification**: When adding new execution phases or modifying process spawning, ensure errors are wrapped with clear phase descriptions so users know exactly which command failed or timed out.
 - **Concurrency & Resource Safety**: Ensure temporary directories and open file handles are cleanly closed, and `defer` cleanup hooks are always run.
 
