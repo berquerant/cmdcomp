@@ -36,9 +36,9 @@ func (u UsageBuilder) usageCode() string {
 }
 
 func (u UsageBuilder) lifecycleCode() string {
-	return u.code("text", `[startup hooks] (sequential)
-      │
-      ├───────────────────────────────┐ (if no interceptor: run concurrently)
+	return u.code("text", `[stdin input] ('-' or '@filename')
+      │ (replicated to both commands if --stdin is specified)
+      ├───────────────────────────────┐
       ▼                               ▼
 [left command]                 [right command]
       │                               ▲
@@ -162,14 +162,15 @@ cmdcomp executes subcommands and pipelines in the following order:
 {{.LifecycleCode}}
 
 1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
-2. **left command & right command**:
+2. **stdin setup**: If '--stdin' is specified, input from stdin ('-') or file ('@filename') is captured and replicated to both left and right commands.
+3. **left command & right command**:
    - Without interceptor: Left and right commands run concurrently.
    - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.
-3. **preprocess pipeline**: Standard output of left and right commands are piped through preprocess filters:
+4. **preprocess pipeline**: Standard output of left and right commands are piped through preprocess filters:
    - Left output: piped through preprocess -> left-preprocess
    - Right output: piped through preprocess -> right-preprocess
-4. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
-5. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
+5. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
+6. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
 
 ## Examples
 
