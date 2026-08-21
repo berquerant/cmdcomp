@@ -234,34 +234,34 @@ cmdcomp --config CONFIG --preset sentry --leftEnv 'VERSION=28.0.3' --rightEnv 'V
 
 ## Flags
 
-  -c, --cleanup stringArray           process before exiting cmdcomp process; invoked like 'cleanup'
-      --config string                 config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir
-      --debug                         enable debug logs
-  -d, --delimiter string              arguments delimiter;
-                                      change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
-  -x, --diff string                   diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
-      --dryrun                        print the shell commands that would be executed, then exit without running them
-  -e, --env stringArray               process environment variables;
-                                      Passed to all processes along with os.Environ.
-                                      --leftEnv is also passed to left output and left preprocess.
-                                      --rightEnv is also passed to right output and right preprocess.
-  -i, --interceptor stringArray       process after left command and before right command; invoked like 'interceptor'
-  -l, --label                         use '--label' option of diff command
-      --leftEnv stringArray           left process environment variables
-      --leftPreprocess stringArray    additional left process before diff; invoked like 'leftPreprocess'; should read input from stdin; should output result to stdout
-  -p, --preprocess stringArray        process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
-      --preset string                 name of preset to be used
-      --processTimeout duration       timeout for each individual process execution
-      --rightEnv stringArray          right process environment variables
-      --rightPreprocess stringArray   additional right process before diff; invoked like 'rightPreprocess'; should read input from stdin; should output result to stdout
-  -S, --shell string                  shell command to be executed (default "bash")
-      --showCmdLog                    show command logs
-  -s, --startup stringArray           process before running commands; invoked like 'startup'
-      --success                       exit successfully even if there are diffs;
-                                      in other words, succeed even if the diff command returns exit status 1
-      --timeout duration              timeout for entire command execution
-      --version                       display version
-  -w, --workDir string                working directory; keep temporary files
+  -c, --cleanup stringArray            process before exiting cmdcomp process; invoked like 'cleanup'
+      --config string                  config file path; default: UserConfigDir/cmdcomp/config.yml or $HOME/.cmdcomp.yml or .cmdcomp.yml; see https://pkg.go.dev/os#UserConfigDir
+      --debug                          enable debug logs
+  -d, --delimiter string               arguments delimiter;
+                                       change the '--' separating COMMON_ARGS, LEFT_ARGS, and RIGHT_ARGS in this (default "--")
+  -x, --diff string                    diff command; invoked like 'diff LEFT_FILE RIGHT_FILE' (default "diff")
+      --dry-run                        print the shell commands that would be executed, then exit without running them
+  -e, --env stringArray                process environment variables;
+                                       Passed to all processes along with os.Environ.
+                                       --left-env is also passed to left output and left preprocess.
+                                       --right-env is also passed to right output and right preprocess.
+  -i, --interceptor stringArray        process after left command and before right command; invoked like 'interceptor'
+  -l, --label                          use '--label' option of diff command
+      --left-env stringArray           left process environment variables
+      --left-preprocess stringArray    additional left process before diff; invoked like 'left-preprocess'; should read input from stdin; should output result to stdout
+  -p, --preprocess stringArray         process before diff; invoked like 'preprocess'; should read input from stdin; should output result to stdout
+      --preset string                  name of preset to be used
+      --process-timeout duration       timeout for each individual process execution
+      --right-env stringArray          right process environment variables
+      --right-preprocess stringArray   additional right process before diff; invoked like 'right-preprocess'; should read input from stdin; should output result to stdout
+  -S, --shell string                   shell command to be executed (default "bash")
+      --show-cmd-log                   show command logs
+  -s, --startup stringArray            process before running commands; invoked like 'startup'
+      --success                        exit successfully even if there are diffs;
+                                       in other words, succeed even if the diff command returns exit status 1
+      --timeout duration               timeout for entire command execution
+      --version                        display version
+  -w, --work-dir string                working directory; keep temporary files
 ````
 
 ## Install

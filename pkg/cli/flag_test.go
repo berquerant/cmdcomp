@@ -120,7 +120,7 @@ func TestParseConfig(t *testing.T) {
 			name: "timeout and processTimeout",
 			args: []string{
 				"--timeout", "1m",
-				"--processTimeout", "5s",
+				"--process-timeout", "5s",
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
