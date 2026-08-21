@@ -63,6 +63,38 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "use u preset",
+			args: []string{
+				"--preset", "u",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				PresetName: "u",
+				Diff:       "diff -u",
+				Delimiter:  "--",
+				Shell:      "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "use uc preset",
+			args: []string{
+				"--preset", "uc",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				PresetName: "uc",
+				Diff:       "diff -u --color",
+				Delimiter:  "--",
+				Shell:      "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
 			name: "startup",
 			args: []string{
 				"-s", "echo s1",
