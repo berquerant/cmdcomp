@@ -174,4 +174,6 @@ After code changes are completed and `make lint` / `make test` succeed, you **MU
 3. **Documentation & Spec Synchronization**:
    - Check if `README.md`, CLI usage / help text (`pkg/cli/usage.go`, `usage.golden`), and `AGENTS.md` are completely synchronized with the latest codebase state.
    - If missing information or outdated examples are found, update and regenerate them immediately.
+4. **Public Disclosure & Safety Check**:
+   - Before reporting the final result to human developers, verify that all changes are safe to be published to the internet (no hardcoded secrets, private credentials, proprietary internal data, accidental sensitive logs, or local personal paths).
 
