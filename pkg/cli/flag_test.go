@@ -63,6 +63,54 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "use u preset",
+			args: []string{
+				"--preset", "u",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				PresetName: "u",
+				Diff:       "diff -u",
+				Delimiter:  "--",
+				Shell:      "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "use uc preset",
+			args: []string{
+				"--preset", "uc",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				PresetName: "uc",
+				Diff:       "diff -u --color",
+				Delimiter:  "--",
+				Shell:      "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "use preset short flag -P",
+			args: []string{
+				"-P", "u",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				PresetName: "u",
+				Diff:       "diff -u",
+				Delimiter:  "--",
+				Shell:      "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
 			name: "startup",
 			args: []string{
 				"-s", "echo s1",
@@ -229,6 +277,46 @@ func TestParseConfig_Env(t *testing.T) {
 			title:      "raw right-stdin without '@' is invalid",
 			args:       []string{"--right-stdin", "data.txt", "--", "echo", "x"},
 			wantErrMsg: "invalid right-stdin 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:     "snapshot '-' is valid",
+			args:      []string{"--snapshot", "-", "--", "echo", "x"},
+			wantStdin: "",
+		},
+		{
+			title:     "snapshot '@file' is valid",
+			args:      []string{"--snapshot", "@data.txt", "--", "echo", "x"},
+			wantStdin: "",
+		},
+		{
+			title:     "left-snapshot and right-snapshot",
+			args:      []string{"--left-snapshot", "-", "--right-snapshot", "@data.txt", "--", "echo", "x"},
+			wantStdin: "",
+		},
+		{
+			title:      "raw snapshot without '@' is invalid",
+			args:       []string{"--snapshot", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid snapshot 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:      "raw left-snapshot without '@' is invalid",
+			args:       []string{"--left-snapshot", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid left-snapshot 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:      "raw right-snapshot without '@' is invalid",
+			args:       []string{"--right-snapshot", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid right-snapshot 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:      "stdin and snapshot exclusivity error for left side",
+			args:       []string{"--left-stdin", "-", "--left-snapshot", "@data.txt", "--", "echo", "x"},
+			wantErrMsg: "stdin and snapshot cannot be used together for left command",
+		},
+		{
+			title:      "stdin and snapshot exclusivity error for right side",
+			args:       []string{"--stdin", "-", "--right-snapshot", "@data.txt", "--", "echo", "x"},
+			wantErrMsg: "stdin and snapshot cannot be used together for right command",
 		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {

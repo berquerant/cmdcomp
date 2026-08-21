@@ -63,10 +63,19 @@ func (r *runner) run(ctx context.Context) (resultErr error) {
 		_ = r.Config.Close()
 	}()
 
-	stdinRes, err := r.exec.SetupStdin(ctx, StdinSetupRequest{
-		LeftStdin:  r.Config.GetLeftStdin(),
-		RightStdin: r.Config.GetRightStdin(),
-		Reader:     r.Config.Reader,
+	stdinRes, err := r.exec.SetupStdin(ctx, SetupInputRequest{
+		Left:   r.Config.GetLeftStdin(),
+		Right:  r.Config.GetRightStdin(),
+		Reader: r.Config.Reader,
+	})
+	if err != nil {
+		return err
+	}
+
+	snapRes, err := r.exec.SetupSnapshot(ctx, SetupInputRequest{
+		Left:   r.Config.GetLeftSnapshot(),
+		Right:  r.Config.GetRightSnapshot(),
+		Reader: r.Config.Reader,
 	})
 	if err != nil {
 		return err
@@ -76,7 +85,7 @@ func (r *runner) run(ctx context.Context) (resultErr error) {
 		return err
 	}
 
-	result, err := r.runGenCmds(ctx, stdinRes)
+	result, err := r.runGenCmds(ctx, stdinRes, snapRes)
 	if err != nil {
 		return err
 	}
@@ -105,20 +114,25 @@ func (r *runner) runHooks(ctx context.Context, phase string, cmds []string) erro
 	return nil
 }
 
-func (r *runner) runGenCmds(ctx context.Context, stdinRes *StdinSetupResult) (*genResult, error) {
+func (r *runner) runGenCmds(ctx context.Context, stdinRes *SetupInputResult, snapRes *SetupInputResult) (*genResult, error) {
 	if len(r.Config.Interceptor) > 0 {
-		return r.runGenCmdsWithInterceptor(ctx, stdinRes)
+		return r.runGenCmdsWithInterceptor(ctx, stdinRes, snapRes)
 	}
-	return r.runGenCmdsConcurrently(ctx, stdinRes)
+	return r.runGenCmdsConcurrently(ctx, stdinRes, snapRes)
 }
 
 // runGenCmdsConcurrently runs left and right commands in parallel when no interceptor is set.
-func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *StdinSetupResult) (*genResult, error) {
+// If a snapshot is configured for a side, command execution is skipped for that side.
+func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *SetupInputResult, snapRes *SetupInputResult) (*genResult, error) {
 	var (
 		leftRef, rightRef FileRef
 		eg, _             = errgroup.WithContext(ctx)
 	)
 	eg.Go(func() error {
+		if snapRes.LeftRef != nil {
+			leftRef = snapRes.LeftRef
+			return nil
+		}
 		ref, err := r.exec.RunGenCmd(ctx, GenCmdRequest{
 			Name:     "left",
 			ExtraEnv: r.Config.GetLeftEnv(),
@@ -132,6 +146,10 @@ func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *StdinSetu
 		return nil
 	})
 	eg.Go(func() error {
+		if snapRes.RightRef != nil {
+			rightRef = snapRes.RightRef
+			return nil
+		}
 		ref, err := r.exec.RunGenCmd(ctx, GenCmdRequest{
 			Name:     "right",
 			ExtraEnv: r.Config.GetRightEnv(),
@@ -151,27 +169,40 @@ func (r *runner) runGenCmdsConcurrently(ctx context.Context, stdinRes *StdinSetu
 }
 
 // runGenCmdsWithInterceptor runs left, interceptors, then right sequentially.
-func (r *runner) runGenCmdsWithInterceptor(ctx context.Context, stdinRes *StdinSetupResult) (*genResult, error) {
-	leftRef, err := r.exec.RunGenCmd(ctx, GenCmdRequest{
-		Name:     "left",
-		ExtraEnv: r.Config.GetLeftEnv(),
-		Args:     r.Config.GetLeftArgs(),
-		Stdin:    stdinRes.LeftRef,
-	})
-	if err != nil {
-		return nil, err
+// If a snapshot is configured for a side, command execution is skipped for that side.
+func (r *runner) runGenCmdsWithInterceptor(ctx context.Context, stdinRes *SetupInputResult, snapRes *SetupInputResult) (*genResult, error) {
+	var leftRef FileRef
+	if snapRes.LeftRef != nil {
+		leftRef = snapRes.LeftRef
+	} else {
+		ref, err := r.exec.RunGenCmd(ctx, GenCmdRequest{
+			Name:     "left",
+			ExtraEnv: r.Config.GetLeftEnv(),
+			Args:     r.Config.GetLeftArgs(),
+			Stdin:    stdinRes.LeftRef,
+		})
+		if err != nil {
+			return nil, err
+		}
+		leftRef = ref
 	}
 	if err := r.runHooks(ctx, "interceptor", r.Config.Interceptor); err != nil {
 		return nil, err
 	}
-	rightRef, err := r.exec.RunGenCmd(ctx, GenCmdRequest{
-		Name:     "right",
-		ExtraEnv: r.Config.GetRightEnv(),
-		Args:     r.Config.GetRightArgs(),
-		Stdin:    stdinRes.RightRef,
-	})
-	if err != nil {
-		return nil, err
+	var rightRef FileRef
+	if snapRes.RightRef != nil {
+		rightRef = snapRes.RightRef
+	} else {
+		ref, err := r.exec.RunGenCmd(ctx, GenCmdRequest{
+			Name:     "right",
+			ExtraEnv: r.Config.GetRightEnv(),
+			Args:     r.Config.GetRightArgs(),
+			Stdin:    stdinRes.RightRef,
+		})
+		if err != nil {
+			return nil, err
+		}
+		rightRef = ref
 	}
 	return &genResult{leftRef: leftRef, rightRef: rightRef}, nil
 }

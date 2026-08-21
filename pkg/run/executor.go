@@ -58,15 +58,15 @@ type DiffRequest struct {
 	Right  FileRef
 }
 
-// StdinSetupRequest holds the parameters for setting up stdin inputs for left and right commands.
-type StdinSetupRequest struct {
-	LeftStdin  string
-	RightStdin string
-	Reader     io.Reader
+// SetupInputRequest holds parameters for setting up input sources (stdin or snapshot).
+type SetupInputRequest struct {
+	Left   string
+	Right  string
+	Reader io.Reader
 }
 
-// StdinSetupResult holds the resolved FileRefs for left and right stdin.
-type StdinSetupResult struct {
+// SetupInputResult holds the resolved FileRefs for left and right sides.
+type SetupInputResult struct {
 	LeftRef  FileRef
 	RightRef FileRef
 }
@@ -80,7 +80,10 @@ type StdinSetupResult struct {
 // existing Executor methods grants dry-run support with no additional effort.
 // Adding fields to request structs extends behaviour without breaking callers.
 type Executor interface {
-	SetupStdin(ctx context.Context, req StdinSetupRequest) (*StdinSetupResult, error)
+	SetupStdin(ctx context.Context, req SetupInputRequest) (*SetupInputResult, error)
+	// SetupSnapshot resolves snapshot inputs for left and right sides.
+	// A nil FileRef in the result means no snapshot for that side.
+	SetupSnapshot(ctx context.Context, req SetupInputRequest) (*SetupInputResult, error)
 	RunHook(ctx context.Context, req HookRequest) error
 	RunGenCmd(ctx context.Context, req GenCmdRequest) (FileRef, error)
 	RunPipeline(ctx context.Context, req PipelineRequest) (FileRef, error)

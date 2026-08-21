@@ -60,62 +60,92 @@ func (u UsageBuilder) lifecycleCode() string {
 }
 
 func (u UsageBuilder) examplesCode() string {
-	return u.code("shell", `# echo a > leftfile
-# echo b > rightfile
-# diff leftfile rightfile
-cmdcomp -- echo -- a -- b
+	return `### Basic Comparison
+Compare the standard output of two commands:
 
+` + u.code("shell", `# Equivalent shell workflow:
 # echo a > leftfile
 # echo b > rightfile
-# diff -u leftfile rightfile
-cmdcomp -x 'diff -u' -- echo -- a -- b
-
-# echo a > leftfile
-# echo b > rightfile
-# diff -u leftfile rightfile --label echo___a --label echo___b
-cmdcomp -x 'diff -u' -l -- echo -- a -- b
-
-# echo a | sed 's|a|c|' > leftfile
-# echo b | sed 's|a|c|' > rightfile
 # diff leftfile rightfile
-cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b
+cmdcomp -- echo -- a -- b`) + `
 
-# helm repo update
-# helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Secret")' > leftfile
-# helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Secret")' > rightfile
-# objdiff -c leftfile rightfile
-cmdcomp --startup 'helm repo update' -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+### Custom Diff Tool & Label
+Use a customized diff tool (e.g. 'diff -u', 'colordiff') and pass argument labels with '-l' / '--label':
 
-# helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > leftfile
-# helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > rightfile
-# npx jsondiffpatch --format=jsonpatch leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -x 'npx jsondiffpatch --format=jsonpatch' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+` + u.code("shell", `# Unified diff with labels:
+cmdcomp -x 'diff -u' -l -- echo -- a -- b`) + `
 
-# helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > leftfile
-# helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > rightfile
-# diff -u --color leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -p 'gron' -x 'diff -u --color' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+### Common Preprocess Pipeline
+Apply filter pipelines (e.g. jq, yq, sed) to both outputs before diffing:
 
-# helm template ./charts/datadog > leftfile
-# git checkout datadog-3.69.3
-# helm template ./charts/datadog > rightfile
-# objdiff -c leftfile rightfile
-cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
+` + u.code("shell", `# Filter both command outputs through sed:
+cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b`) + `
 
-# echo echo -- a > leftfile
-# echo echo -- b > rightfile
-# diff leftfile rightfile
-cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
+### Asymmetric Preprocessing (Left & Right)
+Apply specific preprocess filters only to the left or right command output in addition to common filters:
 
-# cmdcomp --success -- echo -- a -- b > leftfile
-# cmdcomp --success -- echo -- a -- c > rightfile
-# diff leftfile rightfile
-cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
+` + u.code("shell", `# Replace strings differently on left vs right side:
+cmdcomp --left-preprocess 'sed "s|a|c|"' --right-preprocess 'sed "s|a|d|"' -- echo -- a -- a`) + `
 
-# helm show values datadog/datadog --version 3.69.3 | yq -o json | gron > leftfile
-# helm show values datadog/datadog --version 3.164.1 | yq -o json | gron > rightfile
-# diff -u --color leftfile rightfile
-cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datadog/datadog --version -- 3.69.3 -- 3.164.1`)
+### Startup Hooks & Advanced Preprocessing
+Run setup commands (e.g. 'helm repo update') sequentially before running the compare commands:
+
+` + u.code("shell", `# Update repo before comparing secret manifests:
+cmdcomp --startup 'helm repo update' -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug`) + `
+
+### Sequential Execution with Interceptor
+Execute left command first, run interceptor hooks (e.g. git checkout, database migration), then run right command:
+
+` + u.code("shell", `# Compare local helm chart across git revisions:
+cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog`) + `
+
+### Cleanup Hooks & Working Directory
+Ensure teardown hooks run on exit and optionally preserve temporary files in a specified directory:
+
+` + u.code("shell", `# Preserve temp files and clean up resources:
+cmdcomp -w ./tmp-workdir -c 'echo "cleanup done"' -- echo -- a -- b`) + `
+
+### Environment Variables (Common, Left, Right)
+Pass environment variables to all commands or exclusively to the left or right side:
+
+` + u.code("shell", `# Inject environment variables per side:
+cmdcomp -e 'COMMON=1' --left-env 'TARGET=left' --right-env 'TARGET=right' -- bash -c 'echo "$COMMON:$TARGET"'`) + `
+
+### Replicating Standard Input (--stdin)
+Replicate input from standard input ('-') or a file ('@filename') into the stdin of subcommands:
+
+` + u.code("shell", `# Pass shared stdin to grep commands:
+echo -e "alpha\nbeta" | cmdcomp --stdin - -- grep -- alpha -- beta
+
+# Pass input from file to left command only:
+cmdcomp --left-stdin '@data.txt' --right-stdin '-' -- grep -- pattern`) + `
+
+### Snapshot Comparison (--snapshot)
+Bypass command execution on one or both sides and compare directly against static files or stdin:
+
+` + u.code("shell", `# Compare a pre-generated baseline snapshot file against live command output:
+cmdcomp --left-snapshot '@baseline.yaml' -p 'yq ...' -- helm template ./charts/app
+
+# Compare two static snapshot files through common preprocess filters without commands:
+cmdcomp --left-snapshot '@file1.json' --right-snapshot '@file2.json' -p 'jq .key'`) + `
+
+### Dry Run Mode (--dry-run)
+Generate an executable bash script capturing the exact execution pipeline without running any commands:
+
+` + u.code("shell", `# Output shell script for inspection or reproduction:
+cmdcomp --dry-run -x 'diff -u' -p 'jq .' -- curl -s https://api/v1 -- curl -s https://api/v2`) + `
+
+### Exit Code & Success Override (--success)
+Exit with 0 even when diffs are detected (useful for CI summary steps without failing build):
+
+` + u.code("shell", `# Return exit code 0 on diff:
+cmdcomp --success -- echo -- a -- b`) + `
+
+### Custom Delimiter
+Change the argument delimiter from '--' to another token:
+
+` + u.code("shell", `# Use '---' as delimiter when subcommands themselves take '--':
+cmdcomp -d '---' -- echo --- echo -- a --- echo -- b`)
 }
 
 func (u UsageBuilder) configFormatCode() string {
@@ -163,14 +193,16 @@ cmdcomp executes subcommands and pipelines in the following order:
 
 1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
 2. **stdin setup**: If '--stdin', '--left-stdin', or '--right-stdin' is specified, input from stdin ('-') or files ('@filename') is prepared for left and right commands (individual '--left-stdin' / '--right-stdin' takes precedence over '--stdin').
-3. **left command & right command**:
+3. **snapshot setup**: If '--snapshot', '--left-snapshot', or '--right-snapshot' is specified, command execution is skipped for that side and the given input is used directly as the command output. Individual '--left-snapshot' / '--right-snapshot' takes precedence over '--snapshot'. Both '--stdin' and '--snapshot' cannot be used together for the same side.
+4. **left command & right command**:
    - Without interceptor: Left and right commands run concurrently.
    - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.
-4. **preprocess pipeline**: Standard output of left and right commands are piped through preprocess filters:
+   - Sides with a snapshot configured are skipped entirely.
+5. **preprocess pipeline**: Standard output of left and right commands (or snapshot inputs) are piped through preprocess filters:
    - Left output: piped through preprocess -> left-preprocess
    - Right output: piped through preprocess -> right-preprocess
-5. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
-6. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
+6. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
+7. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
 
 ## Examples
 

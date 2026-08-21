@@ -1,6 +1,5 @@
 # cmdcomp
 
-````
 cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
 
 ## Usage
@@ -39,74 +38,130 @@ cmdcomp executes subcommands and pipelines in the following order:
 
 1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
 2. **stdin setup**: If '--stdin', '--left-stdin', or '--right-stdin' is specified, input from stdin ('-') or files ('@filename') is prepared for left and right commands (individual '--left-stdin' / '--right-stdin' takes precedence over '--stdin').
-3. **left command & right command**:
+3. **snapshot setup**: If '--snapshot', '--left-snapshot', or '--right-snapshot' is specified, command execution is skipped for that side and the given input is used directly as the command output. Individual '--left-snapshot' / '--right-snapshot' takes precedence over '--snapshot'. Both '--stdin' and '--snapshot' cannot be used together for the same side.
+4. **left command & right command**:
    - Without interceptor: Left and right commands run concurrently.
    - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.
-4. **preprocess pipeline**: Standard output of left and right commands are piped through preprocess filters:
+   - Sides with a snapshot configured are skipped entirely.
+5. **preprocess pipeline**: Standard output of left and right commands (or snapshot inputs) are piped through preprocess filters:
    - Left output: piped through preprocess -> left-preprocess
    - Right output: piped through preprocess -> right-preprocess
-5. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
-6. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
+6. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
+7. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
 
 ## Examples
 
+### Basic Comparison
+Compare the standard output of two commands:
+
 ```shell
+# Equivalent shell workflow:
 # echo a > leftfile
 # echo b > rightfile
 # diff leftfile rightfile
 cmdcomp -- echo -- a -- b
+```
 
-# echo a > leftfile
-# echo b > rightfile
-# diff -u leftfile rightfile
-cmdcomp -x 'diff -u' -- echo -- a -- b
+### Custom Diff Tool & Label
+Use a customized diff tool (e.g. 'diff -u', 'colordiff') and pass argument labels with '-l' / '--label':
 
-# echo a > leftfile
-# echo b > rightfile
-# diff -u leftfile rightfile --label echo___a --label echo___b
+```shell
+# Unified diff with labels:
 cmdcomp -x 'diff -u' -l -- echo -- a -- b
+```
 
-# echo a | sed 's|a|c|' > leftfile
-# echo b | sed 's|a|c|' > rightfile
-# diff leftfile rightfile
+### Common Preprocess Pipeline
+Apply filter pipelines (e.g. jq, yq, sed) to both outputs before diffing:
+
+```shell
+# Filter both command outputs through sed:
 cmdcomp -p 'sed "s|a|c|"' -- echo -- a -- b
+```
 
-# helm repo update
-# helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Secret")' > leftfile
-# helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Secret")' > rightfile
-# objdiff -c leftfile rightfile
+### Asymmetric Preprocessing (Left & Right)
+Apply specific preprocess filters only to the left or right command output in addition to common filters:
+
+```shell
+# Replace strings differently on left vs right side:
+cmdcomp --left-preprocess 'sed "s|a|c|"' --right-preprocess 'sed "s|a|d|"' -- echo -- a -- a
+```
+
+### Startup Hooks & Advanced Preprocessing
+Run setup commands (e.g. 'helm repo update') sequentially before running the compare commands:
+
+```shell
+# Update repo before comparing secret manifests:
 cmdcomp --startup 'helm repo update' -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+```
 
-# helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > leftfile
-# helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json > rightfile
-# npx jsondiffpatch --format=jsonpatch leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -x 'npx jsondiffpatch --format=jsonpatch' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+### Sequential Execution with Interceptor
+Execute left command first, run interceptor hooks (e.g. git checkout, database migration), then run right command:
 
-# helm template datadog/datadog --version 3.68.0 | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > leftfile
-# helm template datadog/datadog --version 3.69.3 --set datadog.logLevel=debug | yq 'select(.kind=="Deployment" and .metadata.name=="release-name-datadog-cluster-agent")' -o json | gron > rightfile
-# diff -u --color leftfile rightfile
-cmdcomp -p "yq 'select(.kind==\"Deployment\" and .metadata.name==\"release-name-datadog-cluster-agent\")' -o json" -p 'gron' -x 'diff -u --color' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
-
-# helm template ./charts/datadog > leftfile
-# git checkout datadog-3.69.3
-# helm template ./charts/datadog > rightfile
-# objdiff -c leftfile rightfile
+```shell
+# Compare local helm chart across git revisions:
 cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
+```
 
-# echo echo -- a > leftfile
-# echo echo -- b > rightfile
-# diff leftfile rightfile
+### Cleanup Hooks & Working Directory
+Ensure teardown hooks run on exit and optionally preserve temporary files in a specified directory:
+
+```shell
+# Preserve temp files and clean up resources:
+cmdcomp -w ./tmp-workdir -c 'echo "cleanup done"' -- echo -- a -- b
+```
+
+### Environment Variables (Common, Left, Right)
+Pass environment variables to all commands or exclusively to the left or right side:
+
+```shell
+# Inject environment variables per side:
+cmdcomp -e 'COMMON=1' --left-env 'TARGET=left' --right-env 'TARGET=right' -- bash -c 'echo "$COMMON:$TARGET"'
+```
+
+### Replicating Standard Input (--stdin)
+Replicate input from standard input ('-') or a file ('@filename') into the stdin of subcommands:
+
+```shell
+# Pass shared stdin to grep commands:
+echo -e "alpha\nbeta" | cmdcomp --stdin - -- grep -- alpha -- beta
+
+# Pass input from file to left command only:
+cmdcomp --left-stdin '@data.txt' --right-stdin '-' -- grep -- pattern
+```
+
+### Snapshot Comparison (--snapshot)
+Bypass command execution on one or both sides and compare directly against static files or stdin:
+
+```shell
+# Compare a pre-generated baseline snapshot file against live command output:
+cmdcomp --left-snapshot '@baseline.yaml' -p 'yq ...' -- helm template ./charts/app
+
+# Compare two static snapshot files through common preprocess filters without commands:
+cmdcomp --left-snapshot '@file1.json' --right-snapshot '@file2.json' -p 'jq .key'
+```
+
+### Dry Run Mode (--dry-run)
+Generate an executable bash script capturing the exact execution pipeline without running any commands:
+
+```shell
+# Output shell script for inspection or reproduction:
+cmdcomp --dry-run -x 'diff -u' -p 'jq .' -- curl -s https://api/v1 -- curl -s https://api/v2
+```
+
+### Exit Code & Success Override (--success)
+Exit with 0 even when diffs are detected (useful for CI summary steps without failing build):
+
+```shell
+# Return exit code 0 on diff:
+cmdcomp --success -- echo -- a -- b
+```
+
+### Custom Delimiter
+Change the argument delimiter from '--' to another token:
+
+```shell
+# Use '---' as delimiter when subcommands themselves take '--':
 cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
-
-# cmdcomp --success -- echo -- a -- b > leftfile
-# cmdcomp --success -- echo -- a -- c > rightfile
-# diff leftfile rightfile
-cmdcomp -d '---' -- cmdcomp --success -- echo -- a -- --- b --- c
-
-# helm show values datadog/datadog --version 3.69.3 | yq -o json | gron > leftfile
-# helm show values datadog/datadog --version 3.164.1 | yq -o json | gron > rightfile
-# diff -u --color leftfile rightfile
-cmdcomp -x 'diff -u --color' -p 'yq -o json' -p 'gron' -- helm show values datadog/datadog --version -- 3.69.3 -- 3.164.1
 ```
 
 ## Config file
@@ -218,6 +273,14 @@ presets:
     diff: objdiff -cv
     shell: bash
     delimiter: --
+  u:
+    diff: diff -u
+    shell: bash
+    delimiter: --
+  uc:
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
   yml:
     preprocess:
       - yq -P 'sort_keys(..)'
@@ -271,6 +334,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
 
 ## Flags
 
+```
   -c, --cleanup stringArray            command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines
       --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
       --debug                          enable debug log output
@@ -282,22 +346,25 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -l, --label                          pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
       --left-env stringArray           environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
       --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+      --left-snapshot string           use input as left command output without executing the left command ('-' for stdin, '@filename' for file)
       --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
   -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
-      --preset string                  name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff')
+  -P, --preset string                  name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff', 'u', 'uc')
       --process-timeout duration       maximum timeout for each individual subcommand execution (e.g. '10s', '1m')
       --right-env stringArray          environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
       --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+      --right-snapshot string          use input as right command output without executing the right command ('-' for stdin, '@filename' for file)
       --right-stdin string             pass input to stdin of right command only ('-' for stdin, '@filename' for file)
   -S, --shell string                   shell executable used to run subcommands (default "bash")
       --show-cmd-log                   print stdout and stderr of executed subcommands to log output
+      --snapshot string                use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)
   -s, --startup stringArray            command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines
       --stdin string                   pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)
       --success                        exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2
       --timeout duration               maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')
       --version                        display version and exit
   -w, --work-dir string                working directory for temporary output files. When specified, temporary files are preserved after execution
-````
+```
 
 ## Install
 

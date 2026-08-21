@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/berquerant/cmdcomp/pkg/config"
 )
 
 // varFileRef represents a shell variable that holds a tmpdir-relative file path.
@@ -95,39 +97,47 @@ type literalFileRef struct{ path string }
 
 func (r literalFileRef) ShellExpr() string { return shellQuote(r.path) }
 
-func (e *DryRunExecutor) SetupStdin(_ context.Context, req StdinSetupRequest) (*StdinSetupResult, error) {
+func (e *DryRunExecutor) setupInputSource(kind, leftVal, rightVal, varName, comment string) (*SetupInputResult, error) {
 	var stdinRef FileRef
-	if req.LeftStdin == "-" || req.RightStdin == "-" {
+	if leftVal == config.StdinMarker || rightVal == config.StdinMarker {
 		e.mu.Lock()
-		fmt.Fprintf(e.w, "\n# stdin\n")
-		fmt.Fprintln(e.w, `_CMDCOMP_STDIN=$(mktemp "$_CMDCOMP_TMPDIR/stdin.XXXXXX")`)
-		fmt.Fprintln(e.w, `cat > "$_CMDCOMP_STDIN"`)
+		fmt.Fprintf(e.w, "\n# %s\n", comment)
+		fmt.Fprintf(e.w, "%s=$(mktemp \"$_CMDCOMP_TMPDIR/%s.XXXXXX\")\n", varName, kind)
+		fmt.Fprintf(e.w, "cat > \"$%s\"\n", varName)
 		e.mu.Unlock()
-		stdinRef = varFileRef{varName: "_CMDCOMP_STDIN"}
+		stdinRef = varFileRef{varName: varName}
 	}
 
 	resolve := func(val string) (FileRef, error) {
 		if val == "" {
 			return nil, nil
 		}
-		if val == "-" {
+		if val == config.StdinMarker {
 			return stdinRef, nil
 		}
-		if after, ok := strings.CutPrefix(val, "@"); ok {
+		if after, ok := strings.CutPrefix(val, config.FilePrefix); ok {
 			return literalFileRef{path: after}, nil
 		}
-		return nil, fmt.Errorf("invalid stdin '%s'", val)
+		return nil, fmt.Errorf("invalid %s '%s'", kind, val)
 	}
 
-	leftRef, err := resolve(req.LeftStdin)
+	leftRef, err := resolve(leftVal)
 	if err != nil {
 		return nil, err
 	}
-	rightRef, err := resolve(req.RightStdin)
+	rightRef, err := resolve(rightVal)
 	if err != nil {
 		return nil, err
 	}
-	return &StdinSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
+	return &SetupInputResult{LeftRef: leftRef, RightRef: rightRef}, nil
+}
+
+func (e *DryRunExecutor) SetupStdin(_ context.Context, req SetupInputRequest) (*SetupInputResult, error) {
+	return e.setupInputSource("stdin", req.Left, req.Right, "_CMDCOMP_STDIN", "stdin")
+}
+
+func (e *DryRunExecutor) SetupSnapshot(_ context.Context, req SetupInputRequest) (*SetupInputResult, error) {
+	return e.setupInputSource("snapshot", req.Left, req.Right, "_CMDCOMP_SNAPSHOT", "snapshot stdin")
 }
 
 func (e *DryRunExecutor) RunHook(_ context.Context, req HookRequest) error {

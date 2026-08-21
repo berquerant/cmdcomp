@@ -24,7 +24,9 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 	fs.Usage = func() {
 		var b UsageBuilder
 		fmt.Fprint(stdout, b.Build())
+		fmt.Fprintln(stdout, "```")
 		fs.PrintDefaults()
+		fmt.Fprintln(stdout, "```")
 	}
 
 	sc := structconfig.New[Config]()

@@ -9,13 +9,11 @@ readonly bin="${2:-bin/cmdcomp}"
 cat << 'HEADER' > "$target"
 # cmdcomp
 
-````
 HEADER
 
 "./$bin" --help >> "$target" 2>&1
 
 cat << 'FOOTER' >> "$target"
-````
 
 ## Install
 
