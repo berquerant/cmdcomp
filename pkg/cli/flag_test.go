@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/cli"
 	"github.com/berquerant/cmdcomp/pkg/config"
@@ -120,6 +121,26 @@ func TestParseConfig(t *testing.T) {
 					Diff:      "diff",
 					Delimiter: "--",
 					Shell:     "sh",
+					CommonArgs: []string{
+						"echo", "x",
+					},
+				},
+			},
+		},
+		{
+			name: "timeout and processTimeout",
+			args: []string{
+				"--timeout", "1m",
+				"--processTimeout", "5s",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				Config: config.Config{
+					Diff:           "diff",
+					Delimiter:      "--",
+					Shell:          "bash",
+					Timeout:        time.Minute,
+					ProcessTimeout: 5 * time.Second,
 					CommonArgs: []string{
 						"echo", "x",
 					},

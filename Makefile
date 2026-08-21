@@ -12,12 +12,16 @@ $(BIN):
 test:
 	$(GOTEST) ./...
 
+.PHONY: golden
+golden:
+	go test ./pkg/cli -update-golden
+
 .PHONY: init
 init:
 	$(GOMOD) tidy -v
 
 .PHONY: lint
-lint: check-licenses vet go-fix
+lint: check-licenses check-readme vet go-fix
 
 .PHONY: vet
 vet:
@@ -42,3 +46,14 @@ check-licenses: check-licenses-diff
 .PHONY: $(THIRD_PARTY_LICENSES)
 $(THIRD_PARTY_LICENSES):
 	./hack/license.sh report > $@
+
+.PHONY: check-readme-diff
+check-readme-diff: README.md
+	git diff --exit-code README.md
+
+.PHONY: check-readme
+check-readme: check-readme-diff
+
+.PHONY: README.md
+README.md: $(BIN)
+	./hack/readme.sh $@ $(BIN)

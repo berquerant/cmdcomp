@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/berquerant/cmdcomp/pkg/run"
@@ -49,6 +50,19 @@ func TestDryRun(t *testing.T) {
 				"set -euo pipefail",
 				"_CMDCOMP_TMPDIR=$(mktemp -d)",
 				`trap 'rm -rf "$_CMDCOMP_TMPDIR"' EXIT`,
+			},
+		},
+		{
+			name: "timeout comments in preamble",
+			args: []string{"echo", "--", "a", "--", "b"},
+			modify: func(c *config.Config) {
+				c.Timeout = 10 * time.Second
+				c.ProcessTimeout = 2 * time.Second
+			},
+			contains: []string{
+				"# timeout: 10s\n",
+				"# processTimeout: 2s\n",
+				"set -euo pipefail",
 			},
 		},
 		{

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/slicex"
 )
@@ -38,8 +39,10 @@ type Config struct {
 	LeftArgs   []string `yaml:"leftArgs,omitempty"`
 	RightArgs  []string `yaml:"rightArgs,omitempty"`
 
-	Writer  io.Writer `json:"-" yaml:"-"`
-	TempDir string    `json:"-" yaml:"-"`
+	Writer         io.Writer     `json:"-" yaml:"-"`
+	TempDir        string        `json:"-" yaml:"-"`
+	Timeout        time.Duration `yaml:"timeout,omitempty"`
+	ProcessTimeout time.Duration `yaml:"processTimeout,omitempty"`
 }
 
 func (c *Config) Init(args []string) error {

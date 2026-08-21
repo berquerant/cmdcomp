@@ -17,6 +17,7 @@ type e2eTestCase struct {
 	title      string
 	arg        string // flags and arguments passed to bin (e.g. "-x 'diff -u' -- echo -- a -- b")
 	want       string
+	wantStderr string
 	wantStatus int
 	skipDryrun bool // set to true if the dryrun script cannot be executed directly (e.g., nested cmdcomp)
 }
@@ -24,8 +25,8 @@ type e2eTestCase struct {
 func (tc e2eTestCase) run(t *testing.T, bin string) {
 	t.Run(tc.title, func(t *testing.T) {
 		t.Run("direct", func(t *testing.T) {
-			var got bytes.Buffer
-			err := run(t, &got, "bash", "-c", bin+" "+tc.arg)
+			var got, gotErr bytes.Buffer
+			err := runWithStderr(t, &got, &gotErr, "bash", "-c", bin+" "+tc.arg)
 			if tc.wantStatus == 0 {
 				assert.Nil(t, err)
 			} else {
@@ -36,6 +37,9 @@ func (tc e2eTestCase) run(t *testing.T, bin string) {
 				assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
 			}
 			assert.Equal(t, tc.want, got.String())
+			if tc.wantStderr != "" {
+				assert.Contains(t, gotErr.String(), tc.wantStderr)
+			}
 		})
 
 		if !tc.skipDryrun {
@@ -198,6 +202,62 @@ echo "${X}=${Y}"
 > x=2
 `,
 			wantStatus: 1,
+		},
+		{
+			title:      "left fail e2e",
+			arg:        `-- bash -c -- "exit 2" -- "echo b"`,
+			wantStatus: 2,
+			wantStderr: "run left",
+			skipDryrun: true,
+		},
+		{
+			title:      "left fail e2e with --success",
+			arg:        `--success -- bash -c -- "exit 2" -- "echo b"`,
+			wantStatus: 2,
+			wantStderr: "run left",
+			skipDryrun: true,
+		},
+		{
+			title:      "right fail e2e",
+			arg:        `-- bash -c -- "echo a" -- "exit 2"`,
+			wantStatus: 2,
+			wantStderr: "run right",
+			skipDryrun: true,
+		},
+		{
+			title:      "startup fail e2e",
+			arg:        `-s 'exit 3' -- echo -- a -- b`,
+			wantStatus: 2,
+			wantStderr: "run startup[0]",
+			skipDryrun: true,
+		},
+		{
+			title:      "left preprocess fail e2e",
+			arg:        `--leftPreprocess 'grep non_existent' -- echo -- a -- b`,
+			wantStatus: 2,
+			wantStderr: "run preprocess:left pipeline",
+			skipDryrun: true,
+		},
+		{
+			title:      "right preprocess fail e2e",
+			arg:        `--rightPreprocess 'grep non_existent' -- echo -- a -- b`,
+			wantStatus: 2,
+			wantStderr: "run preprocess:right pipeline",
+			skipDryrun: true,
+		},
+		{
+			title:      "total timeout e2e",
+			arg:        `--timeout 50ms -- bash -c -- "sleep 1" -- "echo b"`,
+			wantStatus: 2,
+			wantStderr: "run left",
+			skipDryrun: true,
+		},
+		{
+			title:      "process timeout e2e",
+			arg:        `--processTimeout 50ms -- bash -c -- "echo a" -- "sleep 1"`,
+			wantStatus: 2,
+			wantStderr: "run right",
+			skipDryrun: true,
 		},
 	} {
 		tc.run(t, bin)
@@ -438,10 +498,15 @@ echo "${X}=${Y}"
 
 func run(t *testing.T, stdout io.Writer, name string, arg ...string) error {
 	t.Helper()
+	return runWithStderr(t, stdout, os.Stderr, name, arg...)
+}
+
+func runWithStderr(t *testing.T, stdout, stderr io.Writer, name string, arg ...string) error {
+	t.Helper()
 	c := exec.Command(name, arg...)
 	c.Dir = "../.."
 	c.Stdout = stdout
-	c.Stderr = os.Stderr
+	c.Stderr = stderr
 	t.Logf("run:%v", c.Args)
 	return c.Run()
 }

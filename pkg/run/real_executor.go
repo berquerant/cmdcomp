@@ -61,19 +61,28 @@ func (c cmdLog) intoSlogAttrs() []any {
 
 // RealExecutor implements Executor by actually running commands.
 type RealExecutor struct {
-	tmpDir     string
-	shell      string
-	showCmdLog bool
-	writer     io.Writer
+	tmpDir         string
+	shell          string
+	showCmdLog     bool
+	writer         io.Writer
+	processTimeout time.Duration
 }
 
-func newRealExecutor(tmpDir, shell string, showCmdLog bool, writer io.Writer) *RealExecutor {
+func newRealExecutor(tmpDir, shell string, showCmdLog bool, writer io.Writer, processTimeout time.Duration) *RealExecutor {
 	return &RealExecutor{
-		tmpDir:     tmpDir,
-		shell:      shell,
-		showCmdLog: showCmdLog,
-		writer:     writer,
+		tmpDir:         tmpDir,
+		shell:          shell,
+		showCmdLog:     showCmdLog,
+		writer:         writer,
+		processTimeout: processTimeout,
 	}
+}
+
+func (e *RealExecutor) withProcessTimeout(ctx context.Context, ignore bool) (context.Context, context.CancelFunc) {
+	if ignore || e.processTimeout <= 0 {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, e.processTimeout)
 }
 
 func (e *RealExecutor) logCmd(cl *cmdLog) {
@@ -84,7 +93,10 @@ func (e *RealExecutor) logCmd(cl *cmdLog) {
 
 func (e *RealExecutor) RunHook(ctx context.Context, req HookRequest) error {
 	slog.Debug(fmt.Sprintf("start hook %s[%d]", req.Phase, req.Index))
-	c := exec.CommandContext(ctx, e.shell, "-c", req.Cmd)
+	runCtx, cancel := e.withProcessTimeout(ctx, req.Phase == "cleanup")
+	defer cancel()
+
+	c := exec.CommandContext(runCtx, e.shell, "-c", req.Cmd)
 	// Hook stdout must not mix with diff output on stdout.
 	c.Stdout = os.Stderr
 	c.Stderr = os.Stderr
@@ -94,7 +106,7 @@ func (e *RealExecutor) RunHook(ctx context.Context, req HookRequest) error {
 	cl.close("", err)
 	e.logCmd(cl)
 	if err != nil {
-		return fmt.Errorf("%w: run %s[%d]", err, req.Phase, req.Index)
+		return errors.Join(ErrHook, fmt.Errorf("%w: run %s[%d]", err, req.Phase, req.Index))
 	}
 	slog.Debug(fmt.Sprintf("end hook %s[%d]", req.Phase, req.Index))
 	return nil
@@ -102,14 +114,17 @@ func (e *RealExecutor) RunHook(ctx context.Context, req HookRequest) error {
 
 func (e *RealExecutor) RunGenCmd(ctx context.Context, req GenCmdRequest) (FileRef, error) {
 	slog.Debug(fmt.Sprintf("start gen %s", req.Name), slog.Any("args", req.Args))
+	runCtx, cancel := e.withProcessTimeout(ctx, false)
+	defer cancel()
+
 	c := execx.NewCmd(e.tmpDir, req.Args...)
 	c.Env = append(os.Environ(), req.ExtraEnv...)
 	cl := newCmdLog(req.Args)
-	out, err := c.Run(ctx)
+	out, err := c.Run(runCtx)
 	cl.close(out, err)
 	e.logCmd(cl)
 	if err != nil {
-		return nil, fmt.Errorf("%w: run %s", err, req.Name)
+		return nil, errors.Join(ErrGenCmd, fmt.Errorf("%w: run %s", err, req.Name))
 	}
 	slog.Debug(fmt.Sprintf("end gen %s", req.Name), slog.String("out", out))
 	return pathFileRef{path: out}, nil
@@ -120,6 +135,9 @@ func (e *RealExecutor) RunPipeline(ctx context.Context, req PipelineRequest) (Fi
 		return req.Input, nil
 	}
 	slog.Debug(fmt.Sprintf("start pipeline %s", req.Name), slog.String("in", req.Input.ShellExpr()))
+	runCtx, cancel := e.withProcessTimeout(ctx, false)
+	defer cancel()
+
 	xs := make([]*execx.Cmd, len(req.Cmds))
 	for i, p := range req.Cmds {
 		xs[i] = execx.NewCmd(e.tmpDir, e.shell, "-c", p)
@@ -130,20 +148,20 @@ func (e *RealExecutor) RunPipeline(ctx context.Context, req PipelineRequest) (Fi
 		return nil, fmt.Errorf("%w: open input for %s pipeline", err, req.Name)
 	}
 	defer stdin.Close()
-	p := execx.NewPipedCmd(ctx, e.tmpDir, stdin, xs...)
+	p := execx.NewPipedCmd(runCtx, e.tmpDir, stdin, xs...)
 	logs := make([]*cmdLog, len(xs))
 	for i, x := range xs {
-		v, _ := x.IntoExecCmd(ctx)
+		v, _ := x.IntoExecCmd(runCtx)
 		logs[i] = newCmdLog(v.Args)
 	}
 	logs[0].in = req.Input.ShellExpr()
-	runErr := p.Run(ctx)
+	runErr := p.Run(runCtx)
 	for _, cl := range logs {
 		cl.close(p.Path(), runErr)
 		e.logCmd(cl)
 	}
 	if runErr != nil {
-		return nil, fmt.Errorf("%w: run %s pipeline", runErr, req.Name)
+		return nil, errors.Join(ErrPipeline, fmt.Errorf("%w: run %s pipeline", runErr, req.Name))
 	}
 	slog.Debug(fmt.Sprintf("end pipeline %s", req.Name), slog.String("out", p.Path()))
 	return pathFileRef{path: p.Path()}, nil
@@ -155,7 +173,10 @@ func (e *RealExecutor) RunDiff(ctx context.Context, req DiffRequest) error {
 		args = append(args, "--label", l)
 	}
 	slog.Debug("start run diff", slog.Any("args", args))
-	c := exec.CommandContext(ctx, e.shell, "-c", strings.Join(args, " "))
+	runCtx, cancel := e.withProcessTimeout(ctx, false)
+	defer cancel()
+
+	c := exec.CommandContext(runCtx, e.shell, "-c", strings.Join(args, " "))
 	c.Stdout = e.writer
 	c.Stderr = os.Stderr
 	c.Env = append(os.Environ(), req.ExtraEnv...)
@@ -164,7 +185,7 @@ func (e *RealExecutor) RunDiff(ctx context.Context, req DiffRequest) error {
 	cl.close("", err)
 	e.logCmd(cl)
 	if err != nil {
-		err = errors.Join(ErrDiff, err)
+		err = errors.Join(ErrDiff, fmt.Errorf("%w: run diff", err))
 	}
 	slog.Debug("end run diff", slog.Any("err", err))
 	return err

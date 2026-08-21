@@ -22,19 +22,30 @@ func Main(c *config.Config) error {
 	)
 	defer stop()
 
+	if c.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.Timeout)
+		defer cancel()
+	}
+
 	var exec Executor
 	if c.DryRun {
-		exec = NewDryRunExecutor(c.Shell, c.Writer)
+		exec = NewDryRunExecutor(c.Shell, c.Writer, c.Timeout, c.ProcessTimeout)
 	} else {
-		exec = newRealExecutor(c.TempDir, c.Shell, c.ShowCmdLog, c.Writer)
+		exec = newRealExecutor(c.TempDir, c.Shell, c.ShowCmdLog, c.Writer, c.ProcessTimeout)
 	}
 
 	r := &runner{Config: c, exec: exec}
 	return r.run(ctx)
 }
 
-// ErrDiff is returned when the diff command itself exits with an error.
-var ErrDiff = errors.New("Diff")
+// Errors returned by execution phases.
+var (
+	ErrDiff     = errors.New("Diff")
+	ErrHook     = errors.New("Hook")
+	ErrGenCmd   = errors.New("GenCmd")
+	ErrPipeline = errors.New("Pipeline")
+)
 
 type runner struct {
 	*config.Config
