@@ -712,6 +712,19 @@ i2
 `,
 			errMsg: "exit status 1",
 		},
+		{
+			title: "stdin and snapshot exclusivity error in init",
+			c: &config.Config{
+				Diff:         "diff",
+				Shell:        "bash",
+				Delimiter:    "--",
+				LeftStdin:    "-",
+				LeftSnapshot: "@snap.txt",
+			},
+			args:    []string{"cat"},
+			initErr: true,
+			errMsg:  "stdin and snapshot cannot be used together for left command",
+		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			var out bytes.Buffer

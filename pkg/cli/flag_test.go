@@ -260,6 +260,16 @@ func TestParseConfig_Env(t *testing.T) {
 			args:       []string{"--right-snapshot", "data.txt", "--", "echo", "x"},
 			wantErrMsg: "invalid right-snapshot 'data.txt': must be '-' or '@filename'",
 		},
+		{
+			title:      "stdin and snapshot exclusivity error for left side",
+			args:       []string{"--left-stdin", "-", "--left-snapshot", "@data.txt", "--", "echo", "x"},
+			wantErrMsg: "stdin and snapshot cannot be used together for left command",
+		},
+		{
+			title:      "stdin and snapshot exclusivity error for right side",
+			args:       []string{"--stdin", "-", "--right-snapshot", "@data.txt", "--", "echo", "x"},
+			wantErrMsg: "stdin and snapshot cannot be used together for right command",
+		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)
