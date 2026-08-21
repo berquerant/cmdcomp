@@ -95,6 +95,22 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "use preset short flag -P",
+			args: []string{
+				"-P", "u",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				PresetName: "u",
+				Diff:       "diff -u",
+				Delimiter:  "--",
+				Shell:      "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
 			name: "startup",
 			args: []string{
 				"-s", "echo s1",
