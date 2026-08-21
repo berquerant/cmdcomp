@@ -91,6 +91,52 @@ func (e *RealExecutor) logCmd(cl *cmdLog) {
 	}
 }
 
+func (e *RealExecutor) SetupStdin(ctx context.Context, req StdinSetupRequest) (*StdinSetupResult, error) {
+	var stdinRef FileRef
+	if req.LeftStdin == "-" || req.RightStdin == "-" {
+		tmpfile := execx.NewTmpFile(e.tmpDir)
+		f, err := tmpfile.Open()
+		if err != nil {
+			return nil, fmt.Errorf("%w: create tempfile for stdin", err)
+		}
+		defer f.Close()
+		r := req.Reader
+		if r == nil {
+			r = os.Stdin
+		}
+		if _, err := io.Copy(f, r); err != nil {
+			return nil, fmt.Errorf("%w: copy stdin to tempfile", err)
+		}
+		stdinRef = pathFileRef{path: tmpfile.Path()}
+	}
+
+	resolve := func(val string) (FileRef, error) {
+		if val == "" {
+			return nil, nil
+		}
+		if val == "-" {
+			return stdinRef, nil
+		}
+		if after, ok := strings.CutPrefix(val, "@"); ok {
+			if _, err := os.Stat(after); err != nil {
+				return nil, fmt.Errorf("%w: stat stdin file %s", err, after)
+			}
+			return pathFileRef{path: after}, nil
+		}
+		return nil, fmt.Errorf("invalid stdin '%s'", val)
+	}
+
+	leftRef, err := resolve(req.LeftStdin)
+	if err != nil {
+		return nil, err
+	}
+	rightRef, err := resolve(req.RightStdin)
+	if err != nil {
+		return nil, err
+	}
+	return &StdinSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
+}
+
 func (e *RealExecutor) RunHook(ctx context.Context, req HookRequest) error {
 	slog.Debug(fmt.Sprintf("start hook %s[%d]", req.Phase, req.Index))
 	runCtx, cancel := e.withProcessTimeout(ctx, req.Phase == "cleanup")
@@ -119,6 +165,14 @@ func (e *RealExecutor) RunGenCmd(ctx context.Context, req GenCmdRequest) (FileRe
 
 	c := execx.NewCmd(e.tmpDir, req.Args...)
 	c.Env = append(os.Environ(), req.ExtraEnv...)
+	if req.Stdin != nil {
+		f, err := os.Open(req.Stdin.ShellExpr())
+		if err != nil {
+			return nil, errors.Join(ErrGenCmd, fmt.Errorf("%w: open stdin for %s", err, req.Name))
+		}
+		defer f.Close()
+		c.Stdin = f
+	}
 	cl := newCmdLog(req.Args)
 	out, err := c.Run(runCtx)
 	cl.close(out, err)
@@ -168,9 +222,9 @@ func (e *RealExecutor) RunPipeline(ctx context.Context, req PipelineRequest) (Fi
 }
 
 func (e *RealExecutor) RunDiff(ctx context.Context, req DiffRequest) error {
-	args := []string{req.Cmd, req.Left.ShellExpr(), req.Right.ShellExpr()}
+	args := []string{req.Cmd, shellQuote(req.Left.ShellExpr()), shellQuote(req.Right.ShellExpr())}
 	for _, l := range req.Labels {
-		args = append(args, "--label", l)
+		args = append(args, "--label", shellQuote(l))
 	}
 	slog.Debug("start run diff", slog.Any("args", args))
 	runCtx, cancel := e.withProcessTimeout(ctx, false)

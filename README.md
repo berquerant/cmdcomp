@@ -9,6 +9,45 @@ cmdcomp -- compare the output of two commands with optional preprocessing and cu
 cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]
 ```
 
+## Lifecycle & Data Flow
+
+cmdcomp executes subcommands and pipelines in the following order:
+
+```text
+[stdin input] ('-' or '@filename')
+      │ (replicated to both commands if --stdin is specified)
+      ├───────────────────────────────┐
+      ▼                               ▼
+[left command]                 [right command]
+      │                               ▲
+      │ ──► [interceptor hooks] ──────┘ (if interceptor specified: run sequentially)
+      │                               │
+      ▼ (stdout)                      ▼ (stdout)
+[preprocess:left pipeline]     [preprocess:right pipeline]
+(common + left-preprocess)     (common + right-preprocess)
+      │                               │
+      ▼                               ▼
+ [left tempfile]               [right tempfile]
+      │                               │
+      └───────────────┬───────────────┘
+                      ▼
+               [diff command] (e.g. diff left_file right_file)
+                      │
+                      ▼
+               [cleanup hooks] (guaranteed to run via defer)
+```
+
+1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
+2. **stdin setup**: If '--stdin', '--left-stdin', or '--right-stdin' is specified, input from stdin ('-') or files ('@filename') is prepared for left and right commands (individual '--left-stdin' / '--right-stdin' takes precedence over '--stdin').
+3. **left command & right command**:
+   - Without interceptor: Left and right commands run concurrently.
+   - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.
+4. **preprocess pipeline**: Standard output of left and right commands are piped through preprocess filters:
+   - Left output: piped through preprocess -> left-preprocess
+   - Right output: piped through preprocess -> right-preprocess
+5. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
+6. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
+
 ## Examples
 
 ```shell
@@ -243,14 +282,17 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -l, --label                          pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
       --left-env stringArray           environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
       --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+      --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
   -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
       --preset string                  name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff')
       --process-timeout duration       maximum timeout for each individual subcommand execution (e.g. '10s', '1m')
       --right-env stringArray          environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
       --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+      --right-stdin string             pass input to stdin of right command only ('-' for stdin, '@filename' for file)
   -S, --shell string                   shell executable used to run subcommands (default "bash")
       --show-cmd-log                   print stdout and stderr of executed subcommands to log output
   -s, --startup stringArray            command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines
+      --stdin string                   pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)
       --success                        exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2
       --timeout duration               maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')
       --version                        display version and exit

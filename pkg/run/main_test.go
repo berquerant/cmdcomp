@@ -15,135 +15,143 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	t.Run("cleanup", func(t *testing.T) {
-		out := filepath.Join(t.TempDir(), "output")
-		var stdout bytes.Buffer
-		c := &config.Config{
-			Writer: &stdout,
-			Cleanup: []string{
-				"echo i1 >> " + out,
-				"echo i2 >> " + out,
-			},
-			Diff:      "diff",
-			Shell:     "bash",
-			Delimiter: "--",
-			WorkDir:   t.TempDir(),
-			Debug:     true,
-		}
-		c.SetupLogger(os.Stderr)
-		assert.Nil(t, c.Init([]string{
-			"echo", "--", "a", "--", "b",
-		}))
-		err := run.Main(c)
-		assert.NotNil(t, err)
-		var exitErr *exec.ExitError
-		assert.True(t, errors.As(err, &exitErr))
-		assert.Equal(t, 1, exitErr.ExitCode())
-		assert.Equal(t, `1c1
+	t.Run("lifecycle hooks execution and ordering", func(t *testing.T) {
+		for _, tc := range []struct {
+			title       string
+			setupConfig func(logFile string, stdout *bytes.Buffer) *config.Config
+			args        []string
+			wantStdout  string
+			wantStatus  int
+			wantLogs    string
+		}{
+			{
+				title: "cleanup",
+				setupConfig: func(logFile string, stdout *bytes.Buffer) *config.Config {
+					return &config.Config{
+						Writer: stdout,
+						Cleanup: []string{
+							"echo i1 >> " + logFile,
+							"echo i2 >> " + logFile,
+						},
+						Diff:      "diff",
+						Shell:     "bash",
+						Delimiter: "--",
+					}
+				},
+				args: []string{"echo", "--", "a", "--", "b"},
+				wantStdout: `1c1
 < a
 ---
 > b
-`, stdout.String())
-		outBytes, err := os.ReadFile(out)
-		assert.Nil(t, err)
-		assert.Equal(t, `i1
+`,
+				wantStatus: 1,
+				wantLogs: `i1
 i2
-`, string(outBytes))
-	})
-	t.Run("interceptor", func(t *testing.T) {
-		out := filepath.Join(t.TempDir(), "output")
-		var stdout bytes.Buffer
-		c := &config.Config{
-			Writer: &stdout,
-			Interceptor: []string{
-				"echo i1 >> " + out,
-				"echo i2 >> " + out,
+`,
 			},
-			Diff:      "diff",
-			Shell:     "bash",
-			Delimiter: "--",
-			WorkDir:   t.TempDir(),
-			Debug:     true,
-		}
-		c.SetupLogger(os.Stderr)
-		assert.Nil(t, c.Init([]string{
-			"echo", "--", "a", "--", "b",
-		}))
-		err := run.Main(c)
-		assert.NotNil(t, err)
-		var exitErr *exec.ExitError
-		assert.True(t, errors.As(err, &exitErr))
-		assert.Equal(t, 1, exitErr.ExitCode())
-		assert.Equal(t, `1c1
+			{
+				title: "interceptor",
+				setupConfig: func(logFile string, stdout *bytes.Buffer) *config.Config {
+					return &config.Config{
+						Writer: stdout,
+						Interceptor: []string{
+							"echo i1 >> " + logFile,
+							"echo i2 >> " + logFile,
+						},
+						Diff:      "diff",
+						Shell:     "bash",
+						Delimiter: "--",
+					}
+				},
+				args: []string{"echo", "--", "a", "--", "b"},
+				wantStdout: `1c1
 < a
 ---
 > b
-`, stdout.String())
-		outBytes, err := os.ReadFile(out)
-		assert.Nil(t, err)
-		assert.Equal(t, `i1
+`,
+				wantStatus: 1,
+				wantLogs: `i1
 i2
-`, string(outBytes))
-	})
-	t.Run("startup", func(t *testing.T) {
-		out := filepath.Join(t.TempDir(), "output")
-		var stdout bytes.Buffer
-		c := &config.Config{
-			Writer: &stdout,
-			Startup: []string{
-				"echo s1 >> " + out,
-				"echo s2 >> " + out,
+`,
 			},
-			Diff:      "diff",
-			Shell:     "bash",
-			Delimiter: "--",
-			WorkDir:   t.TempDir(),
-			Debug:     true,
-		}
-		c.SetupLogger(os.Stderr)
-		assert.Nil(t, c.Init([]string{
-			"bash", "-c", "--", "cat " + out, "--", "printf 's1\\ns2\\n'",
-		}))
-		err := run.Main(c)
-		assert.Nil(t, err)
-		assert.Equal(t, "", stdout.String())
-	})
-	t.Run("startup, interceptor, and cleanup order", func(t *testing.T) {
-		logFile := filepath.Join(t.TempDir(), "order.log")
-		var stdout bytes.Buffer
-		c := &config.Config{
-			Writer: &stdout,
-			Startup: []string{
-				"echo 1_startup >> " + logFile,
+			{
+				title: "startup",
+				setupConfig: func(logFile string, stdout *bytes.Buffer) *config.Config {
+					return &config.Config{
+						Writer: stdout,
+						Startup: []string{
+							"echo s1 >> " + logFile,
+							"echo s2 >> " + logFile,
+						},
+						Diff:      "diff",
+						Shell:     "bash",
+						Delimiter: "--",
+					}
+				},
+				args: func() []string {
+					return []string{"bash", "-c", "--", "cat $LOG", "--", "printf 's1\\ns2\\n'"}
+				}(),
+				wantStdout: "",
+				wantStatus: 0,
 			},
-			Interceptor: []string{
-				"echo 3_interceptor >> " + logFile,
-			},
-			Cleanup: []string{
-				"echo 5_cleanup >> " + logFile,
-			},
-			Diff:      "diff",
-			Shell:     "bash",
-			Delimiter: "--",
-			WorkDir:   t.TempDir(),
-			Debug:     true,
-		}
-		c.SetupLogger(os.Stderr)
-		assert.Nil(t, c.Init([]string{
-			"bash", "-c", "--", "echo 2_left >> " + logFile + " && echo same", "--", "echo 4_right >> " + logFile + " && echo same",
-		}))
-		err := run.Main(c)
-		assert.Nil(t, err)
-		assert.Equal(t, "", stdout.String())
-
-		outBytes, err := os.ReadFile(logFile)
-		assert.Nil(t, err)
-		assert.Equal(t, `1_startup
+			{
+				title: "startup, interceptor, and cleanup order",
+				setupConfig: func(logFile string, stdout *bytes.Buffer) *config.Config {
+					return &config.Config{
+						Writer: stdout,
+						Startup: []string{
+							"echo 1_startup >> " + logFile,
+						},
+						Interceptor: []string{
+							"echo 3_interceptor >> " + logFile,
+						},
+						Cleanup: []string{
+							"echo 5_cleanup >> " + logFile,
+						},
+						Diff:      "diff",
+						Shell:     "bash",
+						Delimiter: "--",
+					}
+				},
+				args:       []string{"bash", "-c", "--", "echo 2_left >> $LOG && echo same", "--", "echo 4_right >> $LOG && echo same"},
+				wantStdout: "",
+				wantStatus: 0,
+				wantLogs: `1_startup
 2_left
 3_interceptor
 4_right
 5_cleanup
-`, string(outBytes))
+`,
+			},
+		} {
+			t.Run(tc.title, func(t *testing.T) {
+				logFile := filepath.Join(t.TempDir(), "output.log")
+				var stdout bytes.Buffer
+				c := tc.setupConfig(logFile, &stdout)
+				c.WorkDir = t.TempDir()
+				c.Debug = true
+				c.SetupLogger(os.Stderr)
+				c.LeftEnv = append(c.LeftEnv, "LOG="+logFile)
+				c.RightEnv = append(c.RightEnv, "LOG="+logFile)
+				c.Env = append(c.Env, "LOG="+logFile)
+
+				assert.Nil(t, c.Init(tc.args))
+				err := run.Main(c)
+				if tc.wantStatus == 0 {
+					assert.Nil(t, err)
+				} else {
+					var exitErr *exec.ExitError
+					assert.True(t, errors.As(err, &exitErr))
+					assert.Equal(t, tc.wantStatus, exitErr.ExitCode())
+				}
+				assert.Equal(t, tc.wantStdout, stdout.String())
+				if tc.wantLogs != "" {
+					outBytes, err := os.ReadFile(logFile)
+					assert.Nil(t, err)
+					assert.Equal(t, tc.wantLogs, string(outBytes))
+				}
+			})
+		}
 	})
 
 	for _, tc := range []struct {
@@ -489,6 +497,107 @@ i2
 				},
 			},
 			args: []string{"echo", "--", "a", "--", "a"},
+			want: "",
+		},
+		{
+			title: "stdin from reader (-) without diff",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Stdin:     "-",
+				Reader:    bytes.NewBufferString("hello from stdin\n"),
+			},
+			args: []string{"cat"},
+			want: "",
+		},
+		{
+			title: "stdin from reader (-) with diff via sed",
+			c: &config.Config{
+				Diff:            "diff",
+				Shell:           "bash",
+				Delimiter:       "--",
+				Stdin:           "-",
+				Reader:          bytes.NewBufferString("hello world\n"),
+				LeftPreprocess:  []string{`sed 's|world|left|'`},
+				RightPreprocess: []string{`sed 's|world|right|'`},
+			},
+			args: []string{"cat"},
+			want: `1c1
+< hello left
+---
+> hello right
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "stdin from file (@) without diff",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "input.txt")
+				_ = os.WriteFile(f, []byte("file content\n"), 0644)
+				return &config.Config{
+					Diff:      "diff",
+					Shell:     "bash",
+					Delimiter: "--",
+					Stdin:     "@" + f,
+				}
+			}(),
+			args: []string{"cat"},
+			want: "",
+		},
+		{
+			title: "stdin from file (@) with diff via grep",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "input.txt")
+				_ = os.WriteFile(f, []byte("alpha\nbeta\n"), 0644)
+				return &config.Config{
+					Diff:      "diff",
+					Shell:     "bash",
+					Delimiter: "--",
+					Stdin:     "@" + f,
+				}
+			}(),
+			args: []string{"grep", "--", "alpha", "--", "beta"},
+			want: `1c1
+< alpha
+---
+> beta
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "left-stdin overrides stdin",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "file.txt")
+				_ = os.WriteFile(f, []byte("file content\n"), 0644)
+				return &config.Config{
+					Diff:      "diff",
+					Shell:     "bash",
+					Delimiter: "--",
+					Stdin:     "-",
+					LeftStdin: "@" + f,
+					Reader:    bytes.NewBufferString("stdin content\n"),
+				}
+			}(),
+			args: []string{"cat"},
+			want: `1c1
+< file content
+---
+> stdin content
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "left-stdin (-) and right-stdin (-) both resolve stdin",
+			c: &config.Config{
+				Diff:       "diff",
+				Shell:      "bash",
+				Delimiter:  "--",
+				LeftStdin:  "-",
+				RightStdin: "-",
+				Reader:     bytes.NewBufferString("shared input\n"),
+			},
+			args: []string{"cat"},
 			want: "",
 		},
 	} {

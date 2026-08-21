@@ -1,6 +1,9 @@
 package run
 
-import "context"
+import (
+	"context"
+	"io"
+)
 
 // FileRef is a handle to command output.
 // RealExecutor wraps real filesystem paths; DryRunExecutor wraps shell variable names.
@@ -30,6 +33,8 @@ type GenCmdRequest struct {
 	Name     string
 	ExtraEnv []string
 	Args     []string
+	// Stdin, if non-nil, provides the input piped into the command.
+	Stdin FileRef
 }
 
 // PipelineRequest holds the parameters for a pipeline of shell commands.
@@ -53,6 +58,19 @@ type DiffRequest struct {
 	Right  FileRef
 }
 
+// StdinSetupRequest holds the parameters for setting up stdin inputs for left and right commands.
+type StdinSetupRequest struct {
+	LeftStdin  string
+	RightStdin string
+	Reader     io.Reader
+}
+
+// StdinSetupResult holds the resolved FileRefs for left and right stdin.
+type StdinSetupResult struct {
+	LeftRef  FileRef
+	RightRef FileRef
+}
+
 // Executor abstracts how each execution step in cmdcomp is carried out.
 //
 // Architecture contract: every command invocation in cmdcomp MUST be expressed
@@ -62,6 +80,7 @@ type DiffRequest struct {
 // existing Executor methods grants dry-run support with no additional effort.
 // Adding fields to request structs extends behaviour without breaking callers.
 type Executor interface {
+	SetupStdin(ctx context.Context, req StdinSetupRequest) (*StdinSetupResult, error)
 	RunHook(ctx context.Context, req HookRequest) error
 	RunGenCmd(ctx context.Context, req GenCmdRequest) (FileRef, error)
 	RunPipeline(ctx context.Context, req PipelineRequest) (FileRef, error)

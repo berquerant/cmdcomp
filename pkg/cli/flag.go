@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 
 	"github.com/berquerant/cmdcomp/pkg/slicex"
 	"github.com/berquerant/cmdcomp/version"
@@ -19,9 +20,10 @@ var (
 
 func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 	fs := pflag.NewFlagSet("main", pflag.ContinueOnError)
+	fs.SetOutput(stdout)
 	fs.Usage = func() {
 		var b UsageBuilder
-		fmt.Fprint(stderr, b.Build())
+		fmt.Fprint(stdout, b.Build())
 		fs.PrintDefaults()
 	}
 
@@ -86,6 +88,9 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 	}
 	c := &merged
 
+	if c.Reader == nil {
+		c.Reader = os.Stdin
+	}
 	c.Writer = stdout
 	c.SetupLogger(stderr)
 	slog.Debug("parse args", slog.Any("args", before))

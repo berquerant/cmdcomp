@@ -105,6 +105,8 @@ make bin/cmdcomp
 
 ## 5. Coding & Testing Guidelines
 
+- **Table-Driven Tests**: Write test codes using table-driven tests unless there is a specific reason not to.
+- **Separate Commits for Refactoring**: Test code refactoring and production code refactoring MUST NOT be done in the same commit. Always separate test refactoring and production code refactoring into distinct commits.
 - **Error Identification**: When adding new execution phases or modifying process spawning, ensure errors are wrapped with clear phase descriptions so users know exactly which command failed or timed out.
 - **Concurrency & Resource Safety**: Ensure temporary directories and open file handles are cleanly closed, and `defer` cleanup hooks are always run.
 
@@ -155,3 +157,23 @@ git add pkg/cli/testdata/usage.golden README.md NOTICE
 make lint
 make test
 ```
+
+---
+
+## 7. Post-Verification Review Checklist (After `test` and `lint` Pass)
+
+After code changes are completed and `make lint` / `make test` succeed, you **MUST** perform the following review and cleanup steps before finalizing work:
+
+1. **Goal Alignment & Regression Check**:
+   - Review the entire diff against the baseline branch (`main`).
+   - Check if the changes accurately achieve the requested goals.
+   - Check whether any existing behavior was broken or modified unintentionally (if modified, verify that the breaking change was explicitly intended). If inappropriate, fix it.
+2. **Readability & Maintainability Review**:
+   - Review the overall diff for code clarity, duplicate logic (DRY), or awkward constructs that could hinder future maintenance.
+   - Clarify intent with concise comments where necessary or refactor redundant code.
+3. **Documentation & Spec Synchronization**:
+   - Check if `README.md`, CLI usage / help text (`pkg/cli/usage.go`, `usage.golden`), and `AGENTS.md` are completely synchronized with the latest codebase state.
+   - If missing information or outdated examples are found, update and regenerate them immediately.
+4. **Public Disclosure & Safety Check**:
+   - Before reporting the final result to human developers, verify that all changes are safe to be published to the internet (no hardcoded secrets, private credentials, proprietary internal data, accidental sensitive logs, or local personal paths).
+
