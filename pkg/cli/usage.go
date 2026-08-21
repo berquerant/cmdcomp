@@ -163,14 +163,16 @@ cmdcomp executes subcommands and pipelines in the following order:
 
 1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
 2. **stdin setup**: If '--stdin', '--left-stdin', or '--right-stdin' is specified, input from stdin ('-') or files ('@filename') is prepared for left and right commands (individual '--left-stdin' / '--right-stdin' takes precedence over '--stdin').
-3. **left command & right command**:
+3. **snapshot setup**: If '--snapshot', '--left-snapshot', or '--right-snapshot' is specified, command execution is skipped for that side and the given input is used directly as the command output. Individual '--left-snapshot' / '--right-snapshot' takes precedence over '--snapshot'. Both '--stdin' and '--snapshot' cannot be used together for the same side.
+4. **left command & right command**:
    - Without interceptor: Left and right commands run concurrently.
    - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.
-4. **preprocess pipeline**: Standard output of left and right commands are piped through preprocess filters:
+   - Sides with a snapshot configured are skipped entirely.
+5. **preprocess pipeline**: Standard output of left and right commands (or snapshot inputs) are piped through preprocess filters:
    - Left output: piped through preprocess -> left-preprocess
    - Right output: piped through preprocess -> right-preprocess
-5. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
-6. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
+6. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
+7. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
 
 ## Examples
 

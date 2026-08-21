@@ -130,6 +130,42 @@ func (e *DryRunExecutor) SetupStdin(_ context.Context, req StdinSetupRequest) (*
 	return &StdinSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
 }
 
+func (e *DryRunExecutor) SetupSnapshot(_ context.Context, req SnapshotSetupRequest) (*SnapshotSetupResult, error) {
+	// If either side uses '-', emit a shared stdin capture block.
+	var stdinRef FileRef
+	if req.LeftSnapshot == "-" || req.RightSnapshot == "-" {
+		e.mu.Lock()
+		fmt.Fprintf(e.w, "\n# snapshot stdin\n")
+		fmt.Fprintln(e.w, `_CMDCOMP_SNAPSHOT=$(mktemp "$_CMDCOMP_TMPDIR/snapshot.XXXXXX")`)
+		fmt.Fprintln(e.w, `cat > "$_CMDCOMP_SNAPSHOT"`)
+		e.mu.Unlock()
+		stdinRef = varFileRef{varName: "_CMDCOMP_SNAPSHOT"}
+	}
+
+	resolve := func(val string) (FileRef, error) {
+		if val == "" {
+			return nil, nil
+		}
+		if val == "-" {
+			return stdinRef, nil
+		}
+		if after, ok := strings.CutPrefix(val, "@"); ok {
+			return literalFileRef{path: after}, nil
+		}
+		return nil, fmt.Errorf("invalid snapshot '%s'", val)
+	}
+
+	leftRef, err := resolve(req.LeftSnapshot)
+	if err != nil {
+		return nil, err
+	}
+	rightRef, err := resolve(req.RightSnapshot)
+	if err != nil {
+		return nil, err
+	}
+	return &SnapshotSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
+}
+
 func (e *DryRunExecutor) RunHook(_ context.Context, req HookRequest) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()

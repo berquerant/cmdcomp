@@ -230,6 +230,36 @@ func TestParseConfig_Env(t *testing.T) {
 			args:       []string{"--right-stdin", "data.txt", "--", "echo", "x"},
 			wantErrMsg: "invalid right-stdin 'data.txt': must be '-' or '@filename'",
 		},
+		{
+			title:     "snapshot '-' is valid",
+			args:      []string{"--snapshot", "-", "--", "echo", "x"},
+			wantStdin: "",
+		},
+		{
+			title:     "snapshot '@file' is valid",
+			args:      []string{"--snapshot", "@data.txt", "--", "echo", "x"},
+			wantStdin: "",
+		},
+		{
+			title:     "left-snapshot and right-snapshot",
+			args:      []string{"--left-snapshot", "-", "--right-snapshot", "@data.txt", "--", "echo", "x"},
+			wantStdin: "",
+		},
+		{
+			title:      "raw snapshot without '@' is invalid",
+			args:       []string{"--snapshot", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid snapshot 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:      "raw left-snapshot without '@' is invalid",
+			args:       []string{"--left-snapshot", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid left-snapshot 'data.txt': must be '-' or '@filename'",
+		},
+		{
+			title:      "raw right-snapshot without '@' is invalid",
+			args:       []string{"--right-snapshot", "data.txt", "--", "echo", "x"},
+			wantErrMsg: "invalid right-snapshot 'data.txt': must be '-' or '@filename'",
+		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)

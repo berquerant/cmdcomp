@@ -600,6 +600,118 @@ i2
 			args: []string{"cat"},
 			want: "",
 		},
+		{
+			title: "left-snapshot from file (@) no diff",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "snap.txt")
+				_ = os.WriteFile(f, []byte("hello\n"), 0644)
+				return &config.Config{
+					Diff:         "diff",
+					Shell:        "bash",
+					Delimiter:    "--",
+					LeftSnapshot: "@" + f,
+				}
+			}(),
+			args: []string{"echo", "--", "--", "hello"},
+			want: "",
+		},
+		{
+			title: "left-snapshot from file (@) with diff",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "snap.txt")
+				_ = os.WriteFile(f, []byte("snapshot\n"), 0644)
+				return &config.Config{
+					Diff:         "diff",
+					Shell:        "bash",
+					Delimiter:    "--",
+					LeftSnapshot: "@" + f,
+				}
+			}(),
+			args: []string{"echo", "--", "--", "live"},
+			want: `1c1
+< snapshot
+---
+> live
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "snapshot from stdin (-) both sides no diff",
+			c: &config.Config{
+				Diff:      "diff",
+				Shell:     "bash",
+				Delimiter: "--",
+				Snapshot:  "-",
+				Reader:    bytes.NewBufferString("shared\n"),
+			},
+			args: []string{"echo", "--", "--", "ignored"},
+			want: "",
+		},
+		{
+			title: "snapshot from stdin (-) both sides with preprocess diff",
+			c: &config.Config{
+				Diff:            "diff",
+				Shell:           "bash",
+				Delimiter:       "--",
+				Snapshot:        "-",
+				Reader:          bytes.NewBufferString("hello world\n"),
+				LeftPreprocess:  []string{`sed 's|world|left|'`},
+				RightPreprocess: []string{`sed 's|world|right|'`},
+			},
+			args: []string{"echo", "--", "--", "ignored"},
+			want: `1c1
+< hello left
+---
+> hello right
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "right-snapshot overrides snapshot",
+			c: func() *config.Config {
+				f := filepath.Join(t.TempDir(), "right.txt")
+				_ = os.WriteFile(f, []byte("from file\n"), 0644)
+				return &config.Config{
+					Diff:          "diff",
+					Shell:         "bash",
+					Delimiter:     "--",
+					RightSnapshot: "@" + f,
+					Snapshot:      "-",
+					Reader:        bytes.NewBufferString("from stdin\n"),
+				}
+			}(),
+			args: []string{"echo", "--", "--", "ignored"},
+			want: `1c1
+< from stdin
+---
+> from file
+`,
+			errMsg: "exit status 1",
+		},
+		{
+			title: "both snapshots allow omitting command args",
+			c: func() *config.Config {
+				fl := filepath.Join(t.TempDir(), "left.txt")
+				fr := filepath.Join(t.TempDir(), "right.txt")
+				_ = os.WriteFile(fl, []byte("left\n"), 0644)
+				_ = os.WriteFile(fr, []byte("right\n"), 0644)
+				return &config.Config{
+					Diff:          "diff",
+					Shell:         "bash",
+					Delimiter:     "--",
+					LeftSnapshot:  "@" + fl,
+					RightSnapshot: "@" + fr,
+				}
+			}(),
+			// No command args at all - both sides are snapshots
+			args: []string{},
+			want: `1c1
+< left
+---
+> right
+`,
+			errMsg: "exit status 1",
+		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			var out bytes.Buffer

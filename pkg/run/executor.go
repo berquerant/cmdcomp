@@ -71,6 +71,24 @@ type StdinSetupResult struct {
 	RightRef FileRef
 }
 
+// SnapshotSetupRequest holds the parameters for setting up snapshot inputs.
+// A snapshot bypasses command execution and uses the given input directly as the command output.
+// '-' reads from the Reader (stdin); '@filename' reads from the specified file.
+// LeftSnapshot / RightSnapshot take precedence over Snapshot for the respective side.
+// If both resolve to '-', stdin is read once and shared.
+type SnapshotSetupRequest struct {
+	LeftSnapshot  string
+	RightSnapshot string
+	Reader        io.Reader
+}
+
+// SnapshotSetupResult holds the resolved FileRefs for left and right snapshots.
+// A nil FileRef means no snapshot is configured for that side (command should run normally).
+type SnapshotSetupResult struct {
+	LeftRef  FileRef
+	RightRef FileRef
+}
+
 // Executor abstracts how each execution step in cmdcomp is carried out.
 //
 // Architecture contract: every command invocation in cmdcomp MUST be expressed
@@ -81,6 +99,9 @@ type StdinSetupResult struct {
 // Adding fields to request structs extends behaviour without breaking callers.
 type Executor interface {
 	SetupStdin(ctx context.Context, req StdinSetupRequest) (*StdinSetupResult, error)
+	// SetupSnapshot resolves snapshot inputs for left and right sides.
+	// A nil FileRef in the result means no snapshot for that side.
+	SetupSnapshot(ctx context.Context, req SnapshotSetupRequest) (*SnapshotSetupResult, error)
 	RunHook(ctx context.Context, req HookRequest) error
 	RunGenCmd(ctx context.Context, req GenCmdRequest) (FileRef, error)
 	RunPipeline(ctx context.Context, req PipelineRequest) (FileRef, error)

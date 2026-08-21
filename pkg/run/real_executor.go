@@ -137,6 +137,53 @@ func (e *RealExecutor) SetupStdin(ctx context.Context, req StdinSetupRequest) (*
 	return &StdinSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
 }
 
+func (e *RealExecutor) SetupSnapshot(_ context.Context, req SnapshotSetupRequest) (*SnapshotSetupResult, error) {
+	// If either side uses '-', read stdin once into a shared tempfile.
+	var stdinRef FileRef
+	if req.LeftSnapshot == "-" || req.RightSnapshot == "-" {
+		tmpfile := execx.NewTmpFile(e.tmpDir)
+		f, err := tmpfile.Open()
+		if err != nil {
+			return nil, fmt.Errorf("%w: create tempfile for snapshot stdin", err)
+		}
+		defer f.Close()
+		r := req.Reader
+		if r == nil {
+			r = os.Stdin
+		}
+		if _, err := io.Copy(f, r); err != nil {
+			return nil, fmt.Errorf("%w: copy snapshot stdin to tempfile", err)
+		}
+		stdinRef = pathFileRef{path: tmpfile.Path()}
+	}
+
+	resolve := func(val string) (FileRef, error) {
+		if val == "" {
+			return nil, nil
+		}
+		if val == "-" {
+			return stdinRef, nil
+		}
+		if after, ok := strings.CutPrefix(val, "@"); ok {
+			if _, err := os.Stat(after); err != nil {
+				return nil, fmt.Errorf("%w: stat snapshot file %s", err, after)
+			}
+			return pathFileRef{path: after}, nil
+		}
+		return nil, fmt.Errorf("invalid snapshot '%s'", val)
+	}
+
+	leftRef, err := resolve(req.LeftSnapshot)
+	if err != nil {
+		return nil, err
+	}
+	rightRef, err := resolve(req.RightSnapshot)
+	if err != nil {
+		return nil, err
+	}
+	return &SnapshotSetupResult{LeftRef: leftRef, RightRef: rightRef}, nil
+}
+
 func (e *RealExecutor) RunHook(ctx context.Context, req HookRequest) error {
 	slog.Debug(fmt.Sprintf("start hook %s[%d]", req.Phase, req.Index))
 	runCtx, cancel := e.withProcessTimeout(ctx, req.Phase == "cleanup")

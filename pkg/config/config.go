@@ -39,6 +39,13 @@ type Config struct {
 	Stdin           string        `name:"stdin" usage:"pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)" yaml:"stdin,omitempty"`
 	LeftStdin       string        `name:"left-stdin" usage:"pass input to stdin of left command only ('-' for stdin, '@filename' for file)" yaml:"left-stdin,omitempty"`
 	RightStdin      string        `name:"right-stdin" usage:"pass input to stdin of right command only ('-' for stdin, '@filename' for file)" yaml:"right-stdin,omitempty"`
+	// Snapshot flags: instead of executing the command, use the given input directly as the command output.
+	// '-' reads from stdin; '@filename' reads from the specified file.
+	// LeftSnapshot / RightSnapshot take precedence over Snapshot for the respective side.
+	// If both left and right snapshot to '-', stdin is read once and shared.
+	Snapshot      string        `name:"snapshot" usage:"use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)" yaml:"snapshot,omitempty"`
+	LeftSnapshot  string        `name:"left-snapshot" usage:"use input as left command output without executing the left command ('-' for stdin, '@filename' for file)" yaml:"left-snapshot,omitempty"`
+	RightSnapshot string        `name:"right-snapshot" usage:"use input as right command output without executing the right command ('-' for stdin, '@filename' for file)" yaml:"right-snapshot,omitempty"`
 
 	CommonArgs []string `name:"-" yaml:"common-args,omitempty"`
 	LeftArgs   []string `name:"-" yaml:"left-args,omitempty"`
@@ -58,6 +65,9 @@ type Config struct {
 
 func (c *Config) Init(args []string) error {
 	if err := c.validateStdin(); err != nil {
+		return err
+	}
+	if err := c.validateSnapshot(); err != nil {
 		return err
 	}
 	if err := c.setTempDir(); err != nil {
@@ -83,6 +93,20 @@ func (c *Config) validateStdin() error {
 	return nil
 }
 
+func (c *Config) validateSnapshot() error {
+	for name, val := range map[string]string{
+		"snapshot":       c.Snapshot,
+		"left-snapshot":  c.LeftSnapshot,
+		"right-snapshot": c.RightSnapshot,
+	} {
+		if val == "" || val == "-" || strings.HasPrefix(val, "@") {
+			continue
+		}
+		return fmt.Errorf("%w: invalid %s '%s': must be '-' or '@filename'", ErrConfig, name, val)
+	}
+	return nil
+}
+
 func (c Config) GetLeftStdin() string {
 	if c.LeftStdin != "" {
 		return c.LeftStdin
@@ -95,6 +119,24 @@ func (c Config) GetRightStdin() string {
 		return c.RightStdin
 	}
 	return c.Stdin
+}
+
+// GetLeftSnapshot returns the effective snapshot value for the left side.
+// LeftSnapshot takes precedence over Snapshot.
+func (c Config) GetLeftSnapshot() string {
+	if c.LeftSnapshot != "" {
+		return c.LeftSnapshot
+	}
+	return c.Snapshot
+}
+
+// GetRightSnapshot returns the effective snapshot value for the right side.
+// RightSnapshot takes precedence over Snapshot.
+func (c Config) GetRightSnapshot() string {
+	if c.RightSnapshot != "" {
+		return c.RightSnapshot
+	}
+	return c.Snapshot
 }
 
 func (c *Config) Close() error {
@@ -179,16 +221,21 @@ func (c Config) GetRightArgs() []string {
 
 func (c *Config) setArgs(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("%w: no args", ErrConfig)
+		// Allow empty args if both sides are covered by snapshots.
+		if c.GetLeftSnapshot() == "" || c.GetRightSnapshot() == "" {
+			return fmt.Errorf("%w: no args", ErrConfig)
+		}
+		return nil
 	}
 	before, after := slicex.Split(args, c.Delimiter)
 	c.CommonArgs = before
 	c.LeftArgs, c.RightArgs = slicex.Split(after, c.Delimiter)
 
-	if len(c.GetLeftArgs()) == 0 {
+	// A side without args is only allowed when a snapshot replaces that side's command.
+	if len(c.GetLeftArgs()) == 0 && c.GetLeftSnapshot() == "" {
 		return fmt.Errorf("%w: no left args", ErrConfig)
 	}
-	if len(c.GetRightArgs()) == 0 {
+	if len(c.GetRightArgs()) == 0 && c.GetRightSnapshot() == "" {
 		return fmt.Errorf("%w: no right args", ErrConfig)
 	}
 	return nil
