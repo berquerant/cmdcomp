@@ -99,6 +99,53 @@ make bin/cmdcomp
 
 ## 5. Coding & Testing Guidelines
 
-- **Golden Tests**: When modifying CLI flags or usage texts, run `make golden` and `make README.md` to keep `usage.golden` and `README.md` in sync.
 - **Error Identification**: When adding new execution phases or modifying process spawning, ensure errors are wrapped with clear phase descriptions so users know exactly which command failed or timed out.
 - **Concurrency & Resource Safety**: Ensure temporary directories and open file handles are cleanly closed, and `defer` cleanup hooks are always run.
+
+---
+
+## 6. Managing Generated Files & Handling Diffs
+
+`make lint` runs `git diff --exit-code` on `NOTICE` and `README.md`. Therefore, when these files or golden files change, you **MUST review the generated diff and `git add` them**; otherwise, `make lint` will fail.
+
+### 1. `NOTICE` (Third-Party Licenses)
+- **Trigger**: Added, upgraded, or removed a Go module in `go.mod`.
+- **How to update**:
+  ```bash
+  ./hack/license.sh report > NOTICE
+  ```
+  *(Requires network access to fetch upstream licenses)*.
+- **Next steps**: Review `git diff NOTICE`, and run `git add NOTICE`.
+
+### 2. `pkg/cli/testdata/usage.golden` (CLI Usage & Help Text)
+- **Trigger**: Added/renamed flags, updated descriptions/examples, or changed `pkg/cli/usage.go`.
+- **How to update**:
+  ```bash
+  make golden
+  ```
+- **Next steps**: Review `git diff pkg/cli/testdata/usage.golden`, and run `git add pkg/cli/testdata/usage.golden`.
+
+### 3. `README.md` (Generated Documentation)
+- **Trigger**: CLI flags, usage outputs, or built-in presets have changed.
+- **How to update**:
+  ```bash
+  make README.md
+  ```
+- **Next steps**: Review `git diff README.md`, and run `git add README.md`.
+
+### Complete Update & Verification Workflow
+When modifying flags or dependencies:
+```bash
+# 1. Regenerate
+make golden
+make README.md
+./hack/license.sh report > NOTICE
+
+# 2. Review diffs and stage
+git diff
+git add pkg/cli/testdata/usage.golden README.md NOTICE
+
+# 3. Verify
+make lint
+make test
+```
