@@ -155,3 +155,21 @@ git add pkg/cli/testdata/usage.golden README.md NOTICE
 make lint
 make test
 ```
+
+---
+
+## 7. Post-Verification Review Checklist (After `test` and `lint` Pass)
+
+After code changes are completed and `make lint` / `make test` succeed, you **MUST** perform the following review and cleanup steps before finalizing work:
+
+1. **Goal Alignment & Regression Check**:
+   - Review the entire diff against the baseline branch (`main`).
+   - Check if the changes accurately achieve the requested goals.
+   - Check whether any existing behavior was broken or modified unintentionally (if modified, verify that the breaking change was explicitly intended). If inappropriate, fix it.
+2. **Readability & Maintainability Review**:
+   - Review the overall diff for code clarity, duplicate logic (DRY), or awkward constructs that could hinder future maintenance.
+   - Clarify intent with concise comments where necessary or refactor redundant code.
+3. **Documentation & Spec Synchronization**:
+   - Check if `README.md`, CLI usage / help text (`pkg/cli/usage.go`, `usage.golden`), and `AGENTS.md` are completely synchronized with the latest codebase state.
+   - If missing information or outdated examples are found, update and regenerate them immediately.
+
