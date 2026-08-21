@@ -13,6 +13,7 @@ type UsageBuilder struct{}
 
 type usageTemplateData struct {
 	UsageCode          string
+	LifecycleCode      string
 	ExamplesCode       string
 	ConfigFormatCode   string
 	BuiltinConfigCode  string
@@ -32,6 +33,30 @@ func (UsageBuilder) marshalYaml(v any) string {
 
 func (u UsageBuilder) usageCode() string {
 	return u.code("shell", `cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]`)
+}
+
+func (u UsageBuilder) lifecycleCode() string {
+	return u.code("text", `[startup hooks] (sequential)
+      │
+      ├───────────────────────────────┐ (if no interceptor: run concurrently)
+      ▼                               ▼
+[left command]                 [right command]
+      │                               ▲
+      │ ──► [interceptor hooks] ──────┘ (if interceptor specified: run sequentially)
+      │                               │
+      ▼ (stdout)                      ▼ (stdout)
+[preprocess:left pipeline]     [preprocess:right pipeline]
+(common + left-preprocess)     (common + right-preprocess)
+      │                               │
+      ▼                               ▼
+ [left tempfile]               [right tempfile]
+      │                               │
+      └───────────────┬───────────────┘
+                      ▼
+               [diff command] (e.g. diff left_file right_file)
+                      │
+                      ▼
+               [cleanup hooks] (guaranteed to run via defer)`)
 }
 
 func (u UsageBuilder) examplesCode() string {
@@ -130,6 +155,22 @@ var rawUsageTemplate = `cmdcomp -- compare the output of two commands with optio
 
 {{.UsageCode}}
 
+## Lifecycle & Data Flow
+
+cmdcomp executes subcommands and pipelines in the following order:
+
+{{.LifecycleCode}}
+
+1. **startup**: Setup commands run sequentially before executing left/right commands (e.g. helm repo update).
+2. **left command & right command**:
+   - Without interceptor: Left and right commands run concurrently.
+   - With interceptor: Left command runs first -> interceptor hooks run sequentially (e.g. git checkout <branch>) -> Right command runs.
+3. **preprocess pipeline**: Standard output of left and right commands are piped through preprocess filters:
+   - Left output: piped through preprocess -> left-preprocess
+   - Right output: piped through preprocess -> right-preprocess
+4. **diff**: Output files from the preprocess pipelines are passed to the diff tool ('<diff> LEFT_FILE RIGHT_FILE').
+5. **cleanup**: Teardown hooks are guaranteed to run when cmdcomp exits, even on failure or error.
+
 ## Examples
 
 {{.ExamplesCode}}
@@ -179,6 +220,7 @@ var parsedUsageTemplate = template.Must(template.New("usage").Parse(rawUsageTemp
 func (u UsageBuilder) Build() string {
 	data := usageTemplateData{
 		UsageCode:          u.usageCode(),
+		LifecycleCode:      u.lifecycleCode(),
 		ExamplesCode:       u.examplesCode(),
 		ConfigFormatCode:   u.configFormatCode(),
 		BuiltinConfigCode:  u.builtinConfigCode(),
