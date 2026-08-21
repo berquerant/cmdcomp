@@ -61,6 +61,12 @@ func builtinConfigSet() *ConfigSet {
 			"dyff": &Config{
 				Diff: "dyff between --omit-header --set-exit-code",
 			},
+			"u": &Config{
+				Diff: "diff -u",
+			},
+			"uc": &Config{
+				Diff: "diff -u --color",
+			},
 		},
 	}
 	applyDefaultValuesToConfigSet(cs)

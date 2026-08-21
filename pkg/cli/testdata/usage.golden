@@ -271,6 +271,14 @@ presets:
     diff: objdiff -cv
     shell: bash
     delimiter: --
+  u:
+    diff: diff -u
+    shell: bash
+    delimiter: --
+  uc:
+    diff: diff -u --color
+    shell: bash
+    delimiter: --
   yml:
     preprocess:
       - yq -P 'sort_keys(..)'
