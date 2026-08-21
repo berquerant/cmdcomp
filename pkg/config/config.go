@@ -64,7 +64,7 @@ type Config struct {
 
 	Success    bool   `name:"success" usage:"exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2" yaml:"success,omitempty"`
 	ConfigPath string `name:"config" usage:"configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)" yaml:"-"`
-	PresetName string `name:"preset" usage:"name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff')" yaml:"-"`
+	PresetName string `name:"preset" short:"P" usage:"name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff', 'u', 'uc')" yaml:"-"`
 	Version    bool   `name:"version" usage:"display version and exit" yaml:"-"`
 }
 
