@@ -83,9 +83,6 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		return nil, err
 	}
 	c := &merged
-	c.ConfigPath = ""
-	c.PresetName = ""
-	c.Version = false
 
 	c.Writer = stdout
 	c.SetupLogger(stderr)

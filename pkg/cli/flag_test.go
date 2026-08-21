@@ -50,9 +50,11 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				Diff:      "diff",
-				Delimiter: "--",
-				Shell:     "bash",
+				ConfigPath: configPath,
+				PresetName: "base",
+				Diff:       "diff",
+				Delimiter:  "--",
+				Shell:      "bash",
 				Preprocess: []string{
 					"grep base",
 				},
