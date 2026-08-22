@@ -159,8 +159,8 @@ cmdcomp --success -- echo -- a -- b
 Change the argument delimiter from '--' to another token:
 
 ```shell
-# Use '---' as delimiter when subcommands themselves take '--':
-cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b
+# Use '===' as delimiter when subcommands themselves take '--':
+cmdcomp --delimiter '===' -- echo === echo -- a === echo -- b
 ```
 
 ### Nested Comparison (Comparing Diffs)
@@ -168,7 +168,7 @@ Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the eff
 
 ```shell
 # Compare two diff outputs using --delimiter to avoid nested delimiter collision:
-cmdcomp --delimiter '---' -- cmdcomp --success -- echo -- base -- --- branch-b --- branch-c
+cmdcomp --delimiter '===' -- cmdcomp --success -- echo -- base -- === branch-b === branch-c
 ```
 
 ## Config file

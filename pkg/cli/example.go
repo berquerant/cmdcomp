@@ -127,15 +127,15 @@ var BuiltinExamples = []Example{
 	{
 		Title:       "Custom Delimiter",
 		Description: "Change the argument delimiter from '--' to another token:",
-		ShellDoc:   `# Use '---' as delimiter when subcommands themselves take '--':`,
-		Command:    "cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b",
+		ShellDoc:   `# Use '===' as delimiter when subcommands themselves take '--':`,
+		Command:    "cmdcomp --delimiter '===' -- echo === echo -- a === echo -- b",
 		WantStatus: 1,
 	},
 	{
 		Title:       "Nested Comparison (Comparing Diffs)",
 		Description: "Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the effect of branch B vs branch C against baseline A):",
 		ShellDoc:   `# Compare two diff outputs using --delimiter to avoid nested delimiter collision:`,
-		Command:    "cmdcomp --delimiter '---' -- cmdcomp --success -- echo -- base -- --- branch-b --- branch-c",
+		Command:    "cmdcomp --delimiter '===' -- cmdcomp --success -- echo -- base -- === branch-b === branch-c",
 		WantStatus: 1,
 	},
 }

@@ -161,8 +161,8 @@ cmdcomp --success -- echo -- a -- b
 Change the argument delimiter from '--' to another token:
 
 ```shell
-# Use '---' as delimiter when subcommands themselves take '--':
-cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b
+# Use '===' as delimiter when subcommands themselves take '--':
+cmdcomp --delimiter '===' -- echo === echo -- a === echo -- b
 ```
 
 ### Nested Comparison (Comparing Diffs)
@@ -170,7 +170,7 @@ Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the eff
 
 ```shell
 # Compare two diff outputs using --delimiter to avoid nested delimiter collision:
-cmdcomp --delimiter '---' -- cmdcomp --success -- echo -- base -- --- branch-b --- branch-c
+cmdcomp --delimiter '===' -- cmdcomp --success -- echo -- base -- === branch-b === branch-c
 ```
 
 ## Config file
@@ -347,7 +347,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -c, --cleanup stringArray            command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines
   -C, --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
       --debug                          enable debug log output
-      --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---') (default "--")
+      --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '===') (default "--")
   -x, --diff string                    diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c') (default "diff")
   -n, --dry-run                        print generated bash script capturing the full execution pipeline without executing commands
   -e, --env stringArray                environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated
