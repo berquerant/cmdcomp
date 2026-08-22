@@ -87,19 +87,19 @@ cmdcomp --left-preprocess 'sed "s|a|c|"' --right-preprocess 'sed "s|a|d|"' -- ec
 ```
 
 ### Startup Hooks & Advanced Preprocessing
-Run setup commands (e.g. 'helm repo update') sequentially before running the compare commands:
+Run setup commands sequentially before running the compare commands:
 
 ```shell
-# Update repo before comparing secret manifests:
-cmdcomp --startup 'helm repo update' -p "yq 'select(.kind==\"Secret\")'" -x 'objdiff -c' -- helm template datadog/datadog -- --version 3.68.0 -- --version 3.69.3 --set datadog.logLevel=debug
+# Run startup hook before comparing filtered outputs:
+cmdcomp -s 'echo "starting setup"' -p 'sed "s|foo|bar|"' -x 'diff -u' -- echo -- foo1 -- foo2
 ```
 
 ### Sequential Execution with Interceptor
-Execute left command first, run interceptor hooks (e.g. git checkout, database migration), then run right command:
+Execute left command first, run interceptor hooks (e.g. git checkout, state update), then run right command:
 
 ```shell
-# Compare local helm chart across git revisions:
-cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./charts/datadog
+# Run interceptor hook between left and right commands:
+cmdcomp -i 'echo "state changed"' -x 'diff -u' -- echo -- left -- right
 ```
 
 ### Cleanup Hooks & Working Directory
@@ -122,11 +122,11 @@ cmdcomp -e 'COMMON=1' --left-env 'TARGET=left' --right-env 'TARGET=right' -- bas
 Replicate input from standard input ('-') or a file ('@filename') into the stdin of subcommands:
 
 ```shell
-# Pass shared stdin to grep commands:
-echo -e "alpha\nbeta" | cmdcomp -I - -- grep -- alpha -- beta
+# Pass shared stdin to subcommands:
+# echo -e "alpha\nbeta" | cmdcomp -I - -- grep -- alpha -- beta
 
-# Pass input from file to left command only:
-cmdcomp --left-stdin '@data.txt' --right-stdin '-' -- grep -- pattern
+# Pass input from file to left command and stdin to right command:
+cmdcomp --left-stdin '@data.txt' --right-stdin '-' -- cat
 ```
 
 ### Snapshot Comparison (--snapshot)
@@ -134,10 +134,10 @@ Bypass command execution on one or both sides and compare directly against stati
 
 ```shell
 # Compare a pre-generated baseline snapshot file against live command output:
-cmdcomp --left-snapshot '@baseline.yaml' -p 'yq ...' -- helm template ./charts/app
+# cmdcomp --left-snapshot '@baseline.txt' -p 'sed "s|x|y|"' -- echo -- live
 
 # Compare two static snapshot files through common preprocess filters without commands:
-cmdcomp --left-snapshot '@file1.json' --right-snapshot '@file2.json' -p 'jq .key'
+cmdcomp --left-snapshot '@file1.json' --right-snapshot '@file2.json' -p 'sed "s|10|20|"'
 ```
 
 ### Dry Run Mode (--dry-run)
@@ -145,7 +145,8 @@ Generate an executable bash script capturing the exact execution pipeline withou
 
 ```shell
 # Output shell script for inspection or reproduction:
-cmdcomp -n -x 'diff -u' -p 'jq .' -- curl -s https://api/v1 -- curl -s https://api/v2
+# cmdcomp -n -x 'diff -u' -p 'sed "s|v1|common|"' -- echo -- api-v1 -- echo -- api-v2
+cmdcomp -x 'diff -u' -p 'sed "s|v1|common|"' -- echo -- api-v1 -- echo -- api-v2
 ```
 
 ### Exit Code & Success Override (--success)
@@ -160,8 +161,16 @@ cmdcomp --success -- echo -- a -- b
 Change the argument delimiter from '--' to another token:
 
 ```shell
-# Use '---' as delimiter when subcommands themselves take '--':
-cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b
+# Use '===' as delimiter when subcommands themselves take '--':
+cmdcomp --delimiter '===' -- echo === echo -- a === echo -- b
+```
+
+### Nested Comparison (Comparing Diffs)
+Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the effect of branch B vs branch C against baseline A):
+
+```shell
+# Compare two diff outputs using --delimiter to avoid nested delimiter collision:
+cmdcomp --delimiter '===' -- cmdcomp --success -- echo -- base -- === branch-b === branch-c
 ```
 
 ## Config file
@@ -338,7 +347,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -c, --cleanup stringArray            command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines
   -C, --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
       --debug                          enable debug log output
-      --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---') (default "--")
+      --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '===') (default "--")
   -x, --diff string                    diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c') (default "diff")
   -n, --dry-run                        print generated bash script capturing the full execution pipeline without executing commands
   -e, --env stringArray                environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated

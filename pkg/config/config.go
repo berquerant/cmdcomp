@@ -34,7 +34,7 @@ type Config struct {
 	Diff            string        `name:"diff" short:"x" default:"diff" usage:"diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c')" yaml:"diff,omitempty"`
 	WorkDir         string        `name:"work-dir" usage:"working directory for temporary output files. When specified, temporary files are preserved after execution" yaml:"work-dir,omitempty"`
 	Shell           string        `name:"shell" default:"bash" usage:"shell executable used to run subcommands" yaml:"shell,omitempty"`
-	Delimiter       string        `name:"delimiter" default:"--" usage:"delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---')" yaml:"delimiter,omitempty"`
+	Delimiter       string        `name:"delimiter" default:"--" usage:"delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '===')" yaml:"delimiter,omitempty"`
 	UseLabel        bool          `name:"label" short:"l" usage:"pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)" yaml:"label,omitempty"`
 	// Environment variable pairs (KEY=VALUE): separated by comma (,) in env vars.
 	Env             []string      `name:"env" short:"e" split:"true" sep:"," usage:"environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"env,omitempty"`

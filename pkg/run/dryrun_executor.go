@@ -191,6 +191,10 @@ func (e *DryRunExecutor) RunDiff(_ context.Context, req DiffRequest) error {
 	for _, l := range req.Labels {
 		parts = append(parts, "--label", shellQuote(l))
 	}
-	fmt.Fprintln(e.w, strings.Join(parts, " "))
+	diffCmd := strings.Join(parts, " ")
+	if req.Success {
+		diffCmd = diffCmd + " || [ $? -eq 1 ]"
+	}
+	fmt.Fprintln(e.w, diffCmd)
 	return nil
 }
