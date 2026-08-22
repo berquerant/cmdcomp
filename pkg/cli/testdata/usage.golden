@@ -220,63 +220,13 @@ presets:
     diff: dyff between --omit-header --set-exit-code
     shell: bash
     delimiter: --
-  helm:
-    startup:
-      - helm repo update
-    diff: objdiff -cv
-    shell: bash
-    delimiter: --
-  helm-chart:
-    startup:
-      - helm repo update
-    preprocess:
-      - yq -P 'sort_keys(..)'
-    diff: diff -u --color
-    shell: bash
-    delimiter: --
-    common-args:
-      - helm
-      - show
-      - chart
-      - $CHART
-    left-args:
-      - --version
-      - $LEFT
-    right-args:
-      - --version
-      - $RIGHT
-  helm-values:
-    startup:
-      - helm repo update
-    preprocess:
-      - yq -P 'sort_keys(..)'
-    diff: diff -u --color
-    shell: bash
-    delimiter: --
-    common-args:
-      - helm
-      - show
-      - values
-      - $CHART
-    left-args:
-      - --version
-      - $LEFT
-    right-args:
-      - --version
-      - $RIGHT
   json:
     preprocess:
       - jq -S .
     diff: diff -u --color
     shell: bash
     delimiter: --
-  k8s:
-    diff: objdiff -cv
-    shell: bash
-    delimiter: --
-  k8s-clean:
-    preprocess:
-      - yq 'del(.metadata.resourceVersion, .metadata.uid, .metadata.creationTimestamp, .metadata.generation, .metadata.managedFields, .status)'
+  objdiff:
     diff: objdiff -cv
     shell: bash
     delimiter: --
@@ -288,7 +238,7 @@ presets:
     diff: diff -u --color
     shell: bash
     delimiter: --
-  yml:
+  yaml:
     preprocess:
       - yq -P 'sort_keys(..)'
     diff: diff -u --color
