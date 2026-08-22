@@ -131,6 +131,13 @@ var BuiltinExamples = []Example{
 		Command:    "cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b",
 		WantStatus: 1,
 	},
+	{
+		Title:       "Nested Comparison (Comparing Diffs)",
+		Description: "Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the effect of branch B vs branch C against baseline A):",
+		ShellDoc:   `# Compare two diff outputs using --delimiter to avoid nested delimiter collision:`,
+		Command:    "cmdcomp --delimiter '---' -- cmdcomp --success -- echo -- base -- --- branch-b --- branch-c",
+		WantStatus: 1,
+	},
 }
 
 // RenderExamples formats BuiltinExamples into markdown sections for usage and README.

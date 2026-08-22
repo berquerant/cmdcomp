@@ -163,6 +163,14 @@ Change the argument delimiter from '--' to another token:
 cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b
 ```
 
+### Nested Comparison (Comparing Diffs)
+Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the effect of branch B vs branch C against baseline A):
+
+```shell
+# Compare two diff outputs using --delimiter to avoid nested delimiter collision:
+cmdcomp --delimiter '---' -- cmdcomp --success -- echo -- base -- --- branch-b --- branch-c
+```
+
 ## Config file
 
 ### Format
