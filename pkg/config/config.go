@@ -24,7 +24,7 @@ const (
 type Config struct {
 	ShowCmdLog      bool          `name:"show-cmd-log" usage:"print stdout and stderr of executed subcommands to log output" yaml:"show-cmd-log,omitempty"`
 	Debug           bool          `name:"debug" usage:"enable debug log output" yaml:"debug,omitempty"`
-	DryRun          bool          `name:"dry-run" usage:"print generated bash script capturing the full execution pipeline without executing commands" yaml:"dry-run,omitempty"`
+	DryRun          bool          `name:"dry-run" short:"n" usage:"print generated bash script capturing the full execution pipeline without executing commands" yaml:"dry-run,omitempty"`
 	// Command list hooks: separated by newline (\n) in env vars to allow quotes/delimiters in scripts safely.
 	Startup         []string      `name:"startup" short:"s" split:"true" sep:"\n" usage:"command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"startup,omitempty"`
 	Interceptor     []string      `name:"interceptor" short:"i" split:"true" sep:"\n" usage:"command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"interceptor,omitempty"`
@@ -32,23 +32,23 @@ type Config struct {
 	LeftPreprocess  []string      `name:"left-preprocess" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"left-preprocess,omitempty"`
 	RightPreprocess []string      `name:"right-preprocess" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"right-preprocess,omitempty"`
 	Diff            string        `name:"diff" short:"x" default:"diff" usage:"diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c')" yaml:"diff,omitempty"`
-	WorkDir         string        `name:"work-dir" short:"w" usage:"working directory for temporary output files. When specified, temporary files are preserved after execution" yaml:"work-dir,omitempty"`
-	Shell           string        `name:"shell" short:"S" default:"bash" usage:"shell executable used to run subcommands" yaml:"shell,omitempty"`
-	Delimiter       string        `name:"delimiter" short:"d" default:"--" usage:"delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---')" yaml:"delimiter,omitempty"`
+	WorkDir         string        `name:"work-dir" usage:"working directory for temporary output files. When specified, temporary files are preserved after execution" yaml:"work-dir,omitempty"`
+	Shell           string        `name:"shell" default:"bash" usage:"shell executable used to run subcommands" yaml:"shell,omitempty"`
+	Delimiter       string        `name:"delimiter" default:"--" usage:"delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---')" yaml:"delimiter,omitempty"`
 	UseLabel        bool          `name:"label" short:"l" usage:"pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)" yaml:"label,omitempty"`
 	// Environment variable pairs (KEY=VALUE): separated by comma (,) in env vars.
 	Env             []string      `name:"env" short:"e" split:"true" sep:"," usage:"environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"env,omitempty"`
 	LeftEnv         []string      `name:"left-env" split:"true" sep:"," usage:"environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"left-env,omitempty"`
 	RightEnv        []string      `name:"right-env" split:"true" sep:"," usage:"environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"right-env,omitempty"`
 	Cleanup         []string      `name:"cleanup" short:"c" split:"true" sep:"\n" usage:"command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines" yaml:"cleanup,omitempty"`
-	Stdin           string        `name:"stdin" usage:"pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)" yaml:"stdin,omitempty"`
+	Stdin           string        `name:"stdin" short:"I" usage:"pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)" yaml:"stdin,omitempty"`
 	LeftStdin       string        `name:"left-stdin" usage:"pass input to stdin of left command only ('-' for stdin, '@filename' for file)" yaml:"left-stdin,omitempty"`
 	RightStdin      string        `name:"right-stdin" usage:"pass input to stdin of right command only ('-' for stdin, '@filename' for file)" yaml:"right-stdin,omitempty"`
 	// Snapshot flags: instead of executing the command, use the given input directly as the command output.
 	// '-' reads from stdin; '@filename' reads from the specified file.
 	// LeftSnapshot / RightSnapshot take precedence over Snapshot for the respective side.
 	// If both left and right snapshot to '-', stdin is read once and shared.
-	Snapshot      string        `name:"snapshot" usage:"use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)" yaml:"snapshot,omitempty"`
+	Snapshot      string        `name:"snapshot" short:"S" usage:"use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)" yaml:"snapshot,omitempty"`
 	LeftSnapshot  string        `name:"left-snapshot" usage:"use input as left command output without executing the left command ('-' for stdin, '@filename' for file)" yaml:"left-snapshot,omitempty"`
 	RightSnapshot string        `name:"right-snapshot" usage:"use input as right command output without executing the right command ('-' for stdin, '@filename' for file)" yaml:"right-snapshot,omitempty"`
 
@@ -63,7 +63,7 @@ type Config struct {
 	ProcessTimeout time.Duration `name:"process-timeout" usage:"maximum timeout for each individual subcommand execution (e.g. '10s', '1m')" yaml:"process-timeout,omitempty"`
 
 	Success    bool   `name:"success" usage:"exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2" yaml:"success,omitempty"`
-	ConfigPath string `name:"config" usage:"configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)" yaml:"-"`
+	ConfigPath string `name:"config" short:"C" usage:"configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)" yaml:"-"`
 	PresetName string `name:"preset" short:"P" usage:"name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff', 'u', 'uc')" yaml:"-"`
 	Version    bool   `name:"version" usage:"display version and exit" yaml:"-"`
 }
