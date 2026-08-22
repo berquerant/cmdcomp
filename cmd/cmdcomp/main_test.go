@@ -94,7 +94,7 @@ func TestE2E(t *testing.T) {
 		for _, tc := range []e2eTestCase{
 			{
 				title: "changed",
-				arg:   `-d '---' -- echo --- echo -- a --- echo -- b`,
+				arg:   `--delimiter '---' -- echo --- echo -- a --- echo -- b`,
 				want: `1c1
 < echo -- a
 ---
@@ -104,7 +104,7 @@ func TestE2E(t *testing.T) {
 			},
 			{
 				title: "cmdcomp",
-				arg:   fmt.Sprintf(`-d '---' -- %[1]s --success -- echo -- a -- --- b --- c`, bin),
+				arg:   fmt.Sprintf(`--delimiter '---' -- %[1]s --success -- echo -- a -- --- b --- c`, bin),
 				want: `4c4
 < > b
 ---
