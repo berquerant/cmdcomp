@@ -92,21 +92,12 @@ func TestBuiltinExamples(t *testing.T) {
 				}
 
 				err := cScript.Run()
-				// Determine expected exit status of the underlying generated shell script:
-				// When cmdcomp runs with -n or --success, cmdcomp itself exits 0, but the
-				// generated script executes the actual comparison pipeline.
-				wantScriptStatus := ex.WantStatus
-				if strings.Contains(cmdArgs, "-n") || strings.Contains(cmdArgs, "--dry-run") || strings.Contains(cmdArgs, "--success") {
-					// The dryrun example command diffs "api-common" vs "api-v2", resulting in diff exit code 1
-					wantScriptStatus = 1
-				}
-
-				if wantScriptStatus == 0 {
+				if ex.WantStatus == 0 {
 					assert.NoError(t, err, "dryrun script failed: %s", stderr.String())
 				} else {
 					var exitErr *exec.ExitError
 					require.True(t, errors.As(err, &exitErr), "dryrun script expected exit error, got %v", err)
-					assert.Equal(t, wantScriptStatus, exitErr.ExitCode(), "dryrun script stderr: %s", stderr.String())
+					assert.Equal(t, ex.WantStatus, exitErr.ExitCode(), "dryrun script stderr: %s", stderr.String())
 				}
 			})
 		})
