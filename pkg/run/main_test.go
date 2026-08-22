@@ -220,9 +220,9 @@ i2
 			c: &config.Config{
 				Diff:      "diff",
 				Shell:     "bash",
-				Delimiter: "---",
+				Delimiter: "===",
 			},
-			args: []string{"echo", "---", "--", "a", "---", "b"},
+			args: []string{"echo", "===", "--", "a", "===", "b"},
 			want: `1c1
 < -- a
 ---
