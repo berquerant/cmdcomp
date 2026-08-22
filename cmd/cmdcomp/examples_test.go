@@ -18,6 +18,7 @@ func TestBuiltinExamples(t *testing.T) {
 	require.NoError(t, run(t, os.Stdout, "make"))
 	bin, err := filepath.Abs("../../bin/cmdcomp")
 	require.NoError(t, err)
+	t.Setenv("PATH", filepath.Dir(bin)+":"+os.Getenv("PATH"))
 
 	for _, ex := range cli.BuiltinExamples {
 		t.Run(ex.Title, func(t *testing.T) {
