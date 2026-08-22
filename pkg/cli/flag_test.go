@@ -151,15 +151,53 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "shell short flag",
+			name: "dry-run short flag",
 			args: []string{
-				"-S", "sh",
+				"-n",
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
+				DryRun:    true,
 				Diff:      "diff",
 				Delimiter: "--",
-				Shell:     "sh",
+				Shell:     "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "stdin and snapshot short flags",
+			args: []string{
+				"-I", "-",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				Stdin:     "-",
+				Diff:      "diff",
+				Delimiter: "--",
+				Shell:     "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "config short flag",
+			args: []string{
+				"-C", configPath,
+				"--preset", "base",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				ConfigPath: configPath,
+				PresetName: "base",
+				Diff:       "diff",
+				Delimiter:  "--",
+				Shell:      "bash",
+				Preprocess: []string{
+					"grep base",
+				},
 				CommonArgs: []string{
 					"echo", "x",
 				},
@@ -195,6 +233,7 @@ func TestParseConfig(t *testing.T) {
 			got.Writer = nil
 			tc.want.Reader = nil
 			got.Reader = nil
+			tc.want.TempDir = ""
 			got.TempDir = ""
 			assert.Equal(t, tc.want, got)
 		})
@@ -239,7 +278,7 @@ func TestParseConfig_Env(t *testing.T) {
 	}{
 		{
 			title:     "flag overrides env",
-			args:      []string{"--diff", "flag-diff", "-S", "sh", "--", "echo", "x"},
+			args:      []string{"--diff", "flag-diff", "--shell", "sh", "--", "echo", "x"},
 			wantDiff:  "flag-diff",
 			wantShell: "sh",
 		},

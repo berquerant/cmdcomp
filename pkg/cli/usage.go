@@ -103,7 +103,7 @@ cmdcomp -i 'git checkout datadog-3.69.3' -x 'objdiff -c' -- helm template ./char
 Ensure teardown hooks run on exit and optionally preserve temporary files in a specified directory:
 
 ` + u.code("shell", `# Preserve temp files and clean up resources:
-cmdcomp -w ./tmp-workdir -c 'echo "cleanup done"' -- echo -- a -- b`) + `
+cmdcomp --work-dir ./tmp-workdir -c 'echo "cleanup done"' -- echo -- a -- b`) + `
 
 ### Environment Variables (Common, Left, Right)
 Pass environment variables to all commands or exclusively to the left or right side:
@@ -115,7 +115,7 @@ cmdcomp -e 'COMMON=1' --left-env 'TARGET=left' --right-env 'TARGET=right' -- bas
 Replicate input from standard input ('-') or a file ('@filename') into the stdin of subcommands:
 
 ` + u.code("shell", `# Pass shared stdin to grep commands:
-echo -e "alpha\nbeta" | cmdcomp --stdin - -- grep -- alpha -- beta
+echo -e "alpha\nbeta" | cmdcomp -I - -- grep -- alpha -- beta
 
 # Pass input from file to left command only:
 cmdcomp --left-stdin '@data.txt' --right-stdin '-' -- grep -- pattern`) + `
@@ -133,7 +133,7 @@ cmdcomp --left-snapshot '@file1.json' --right-snapshot '@file2.json' -p 'jq .key
 Generate an executable bash script capturing the exact execution pipeline without running any commands:
 
 ` + u.code("shell", `# Output shell script for inspection or reproduction:
-cmdcomp --dry-run -x 'diff -u' -p 'jq .' -- curl -s https://api/v1 -- curl -s https://api/v2`) + `
+cmdcomp -n -x 'diff -u' -p 'jq .' -- curl -s https://api/v1 -- curl -s https://api/v2`) + `
 
 ### Exit Code & Success Override (--success)
 Exit with 0 even when diffs are detected (useful for CI summary steps without failing build):
@@ -145,7 +145,7 @@ cmdcomp --success -- echo -- a -- b`) + `
 Change the argument delimiter from '--' to another token:
 
 ` + u.code("shell", `# Use '---' as delimiter when subcommands themselves take '--':
-cmdcomp -d '---' -- echo --- echo -- a --- echo -- b`)
+cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b`)
 }
 
 func (u UsageBuilder) configFormatCode() string {

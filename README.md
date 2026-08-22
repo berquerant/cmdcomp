@@ -107,7 +107,7 @@ Ensure teardown hooks run on exit and optionally preserve temporary files in a s
 
 ```shell
 # Preserve temp files and clean up resources:
-cmdcomp -w ./tmp-workdir -c 'echo "cleanup done"' -- echo -- a -- b
+cmdcomp --work-dir ./tmp-workdir -c 'echo "cleanup done"' -- echo -- a -- b
 ```
 
 ### Environment Variables (Common, Left, Right)
@@ -123,7 +123,7 @@ Replicate input from standard input ('-') or a file ('@filename') into the stdin
 
 ```shell
 # Pass shared stdin to grep commands:
-echo -e "alpha\nbeta" | cmdcomp --stdin - -- grep -- alpha -- beta
+echo -e "alpha\nbeta" | cmdcomp -I - -- grep -- alpha -- beta
 
 # Pass input from file to left command only:
 cmdcomp --left-stdin '@data.txt' --right-stdin '-' -- grep -- pattern
@@ -145,7 +145,7 @@ Generate an executable bash script capturing the exact execution pipeline withou
 
 ```shell
 # Output shell script for inspection or reproduction:
-cmdcomp --dry-run -x 'diff -u' -p 'jq .' -- curl -s https://api/v1 -- curl -s https://api/v2
+cmdcomp -n -x 'diff -u' -p 'jq .' -- curl -s https://api/v1 -- curl -s https://api/v2
 ```
 
 ### Exit Code & Success Override (--success)
@@ -161,7 +161,7 @@ Change the argument delimiter from '--' to another token:
 
 ```shell
 # Use '---' as delimiter when subcommands themselves take '--':
-cmdcomp -d '---' -- echo --- echo -- a --- echo -- b
+cmdcomp --delimiter '---' -- echo --- echo -- a --- echo -- b
 ```
 
 ## Config file
@@ -336,11 +336,11 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
 
 ```
   -c, --cleanup stringArray            command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines
-      --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
+  -C, --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
       --debug                          enable debug log output
-  -d, --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---') (default "--")
+      --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '---') (default "--")
   -x, --diff string                    diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c') (default "diff")
-      --dry-run                        print generated bash script capturing the full execution pipeline without executing commands
+  -n, --dry-run                        print generated bash script capturing the full execution pipeline without executing commands
   -e, --env stringArray                environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated
   -i, --interceptor stringArray        command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines
   -l, --label                          pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
@@ -355,15 +355,15 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
       --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
       --right-snapshot string          use input as right command output without executing the right command ('-' for stdin, '@filename' for file)
       --right-stdin string             pass input to stdin of right command only ('-' for stdin, '@filename' for file)
-  -S, --shell string                   shell executable used to run subcommands (default "bash")
+      --shell string                   shell executable used to run subcommands (default "bash")
       --show-cmd-log                   print stdout and stderr of executed subcommands to log output
-      --snapshot string                use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)
+  -S, --snapshot string                use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)
   -s, --startup stringArray            command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines
-      --stdin string                   pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)
+  -I, --stdin string                   pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)
       --success                        exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2
       --timeout duration               maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')
       --version                        display version and exit
-  -w, --work-dir string                working directory for temporary output files. When specified, temporary files are preserved after execution
+      --work-dir string                working directory for temporary output files. When specified, temporary files are preserved after execution
 ```
 
 ## Install
