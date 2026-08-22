@@ -53,9 +53,10 @@ type DiffRequest struct {
 	Cmd      string
 	ExtraEnv []string
 	// Labels, if non-empty, are appended as successive --label arguments.
-	Labels []string
-	Left   FileRef
-	Right  FileRef
+	Labels  []string
+	Left    FileRef
+	Right   FileRef
+	Success bool
 }
 
 // SetupInputRequest holds parameters for setting up input sources (stdin or snapshot).

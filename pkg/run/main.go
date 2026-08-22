@@ -260,5 +260,6 @@ func (r *runner) runDiff(ctx context.Context, left, right FileRef) error {
 		Labels:   labels,
 		Left:     left,
 		Right:    right,
+		Success:  r.Config.Success,
 	})
 }

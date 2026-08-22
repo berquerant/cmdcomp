@@ -112,9 +112,10 @@ var BuiltinExamples = []Example{
 	{
 		Title:       "Dry Run Mode (--dry-run)",
 		Description: "Generate an executable bash script capturing the exact execution pipeline without running any commands:",
-		ShellDoc:   `# Output shell script for inspection or reproduction:`,
-		Command:    `cmdcomp -n -x 'diff -u' -p 'sed "s|v1|common|"' -- echo -- api-v1 -- echo -- api-v2`,
-		WantStatus: 0,
+		ShellDoc:   `# Output shell script for inspection or reproduction:
+# cmdcomp -n -x 'diff -u' -p 'sed "s|v1|common|"' -- echo -- api-v1 -- echo -- api-v2`,
+		Command:    `cmdcomp -x 'diff -u' -p 'sed "s|v1|common|"' -- echo -- api-v1 -- echo -- api-v2`,
+		WantStatus: 1,
 	},
 	{
 		Title:       "Exit Code & Success Override (--success)",
