@@ -221,6 +221,34 @@ func TestParseConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "no args and no snapshots returns error",
+			args: []string{
+				"--diff", "diff -u",
+			},
+			errMsg: "no args",
+		},
+		{
+			name: "invalid stdin without -- returns error",
+			args: []string{
+				"--stdin", "invalid-stdin",
+			},
+			errMsg: "invalid stdin 'invalid-stdin'",
+		},
+		{
+			name: "both snapshots without -- succeeds and sets tempdir",
+			args: []string{
+				"--left-snapshot", "@left.txt",
+				"--right-snapshot", "@right.txt",
+			},
+			want: &cli.Config{
+				Diff:          "diff",
+				Delimiter:     "--",
+				Shell:         "bash",
+				LeftSnapshot:  "@left.txt",
+				RightSnapshot: "@right.txt",
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)
@@ -383,3 +411,105 @@ func TestParseConfig_Env(t *testing.T) {
 		})
 	}
 }
+
+func TestParseConfig_EnvPresetAndConfig(t *testing.T) {
+	const customYml = `presets:
+  custom:
+    diff: custom-yml-diff
+    shell: zsh
+  other:
+    diff: other-yml-diff
+`
+	configPath := filepath.Join(t.TempDir(), "custom.yml")
+	if !assert.Nil(t, os.WriteFile(configPath, []byte(customYml), 0644)) {
+		return
+	}
+
+	for _, tc := range []struct {
+		name       string
+		env        map[string]string
+		args       []string
+		wantDiff   string
+		wantShell  string
+		wantConfig string
+		wantPreset string
+		wantErrMsg string
+	}{
+		{
+			name: "env preset builtin",
+			env: map[string]string{
+				"CMDCOMP_PRESET": "uc",
+			},
+			args:       []string{"--", "echo", "x"},
+			wantDiff:   "diff -u --color",
+			wantPreset: "uc",
+		},
+		{
+			name: "env config and preset",
+			env: map[string]string{
+				"CMDCOMP_CONFIG": configPath,
+				"CMDCOMP_PRESET": "custom",
+			},
+			args:       []string{"--", "echo", "x"},
+			wantDiff:   "custom-yml-diff",
+			wantShell:  "zsh",
+			wantConfig: configPath,
+			wantPreset: "custom",
+		},
+		{
+			name: "flag overrides env preset",
+			env: map[string]string{
+				"CMDCOMP_CONFIG": configPath,
+				"CMDCOMP_PRESET": "custom",
+			},
+			args:       []string{"--preset", "other", "--", "echo", "x"},
+			wantDiff:   "other-yml-diff",
+			wantPreset: "other",
+		},
+		{
+			name: "flag overrides env config",
+			env: map[string]string{
+				"CMDCOMP_CONFIG": "non-existent-config.yml",
+				"CMDCOMP_PRESET": "custom",
+			},
+			args:       []string{"--config", configPath, "--", "echo", "x"},
+			wantDiff:   "custom-yml-diff",
+			wantShell:  "zsh",
+			wantConfig: configPath,
+			wantPreset: "custom",
+		},
+		{
+			name: "env preset not found",
+			env: map[string]string{
+				"CMDCOMP_PRESET": "non-existent-preset",
+			},
+			args:       []string{"--", "echo", "x"},
+			wantErrMsg: "preset not found non-existent-preset",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)
+			if tc.wantErrMsg != "" {
+				assert.ErrorContains(t, err, tc.wantErrMsg)
+				return
+			}
+			assert.Nil(t, err)
+			if tc.wantDiff != "" {
+				assert.Equal(t, tc.wantDiff, got.Diff)
+			}
+			if tc.wantShell != "" {
+				assert.Equal(t, tc.wantShell, got.Shell)
+			}
+			if tc.wantConfig != "" {
+				assert.Equal(t, tc.wantConfig, got.ConfigPath)
+			}
+			if tc.wantPreset != "" {
+				assert.Equal(t, tc.wantPreset, got.PresetName)
+			}
+		})
+	}
+}
+
