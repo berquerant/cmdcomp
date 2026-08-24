@@ -221,6 +221,34 @@ func TestParseConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "no args and no snapshots returns error",
+			args: []string{
+				"--diff", "diff -u",
+			},
+			errMsg: "no args",
+		},
+		{
+			name: "invalid stdin without -- returns error",
+			args: []string{
+				"--stdin", "invalid-stdin",
+			},
+			errMsg: "invalid stdin 'invalid-stdin'",
+		},
+		{
+			name: "both snapshots without -- succeeds and sets tempdir",
+			args: []string{
+				"--left-snapshot", "@left.txt",
+				"--right-snapshot", "@right.txt",
+			},
+			want: &cli.Config{
+				Diff:          "diff",
+				Delimiter:     "--",
+				Shell:         "bash",
+				LeftSnapshot:  "@left.txt",
+				RightSnapshot: "@right.txt",
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)
