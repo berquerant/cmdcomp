@@ -57,15 +57,18 @@ func (e *DryRunExecutor) preamble() {
 // stepVar converts a step name to an upper-case shell variable name.
 // e.g. "preprocess:left" → "_CMDCOMP_PREPROCESS_LEFT"
 func stepVar(name string) string {
-	r := strings.NewReplacer(":", "_", "-", "_", " ", "_", ".", "_")
-	return "_CMDCOMP_" + strings.ToUpper(r.Replace(name))
+	return "_CMDCOMP_" + strings.ToUpper(sanitizeStepName(name))
 }
 
 // tmpPath returns a shell expression for a tmpdir-relative file named after the step.
 // e.g. "preprocess:left" → `"$_CMDCOMP_TMPDIR/preprocess_left"`
 func tmpPath(name string) string {
+	return fmt.Sprintf(`"$_CMDCOMP_TMPDIR/%s"`, strings.ToLower(sanitizeStepName(name)))
+}
+
+func sanitizeStepName(name string) string {
 	r := strings.NewReplacer(":", "_", "-", "_", " ", "_", ".", "_")
-	return fmt.Sprintf(`"$_CMDCOMP_TMPDIR/%s"`, strings.ToLower(r.Replace(name)))
+	return r.Replace(name)
 }
 
 // shellQuote single-quotes a string for safe use in a generated shell script.
@@ -97,35 +100,43 @@ type literalFileRef struct{ path string }
 
 func (r literalFileRef) ShellExpr() string { return shellQuote(r.path) }
 
+func resolveInputRef(val, kind string, stdinRef FileRef) (FileRef, error) {
+	if val == "" {
+		return nil, nil
+	}
+	if val == config.StdinMarker {
+		return stdinRef, nil
+	}
+	if after, ok := strings.CutPrefix(val, config.FilePrefix); ok {
+		return literalFileRef{path: after}, nil
+	}
+	return nil, fmt.Errorf("invalid %s '%s'", kind, val)
+}
+
+func (e *DryRunExecutor) sectionComment(title string) {
+	fmt.Fprintf(e.w, "\n# %s\n", title)
+}
+
+func (e *DryRunExecutor) assignVar(varName, valExpr string) {
+	fmt.Fprintf(e.w, "%s=%s\n", varName, valExpr)
+}
+
 func (e *DryRunExecutor) setupInputSource(kind, leftVal, rightVal, varName, comment string) (*SetupInputResult, error) {
 	var stdinRef FileRef
 	if leftVal == config.StdinMarker || rightVal == config.StdinMarker {
 		e.mu.Lock()
-		fmt.Fprintf(e.w, "\n# %s\n", comment)
+		e.sectionComment(comment)
 		fmt.Fprintf(e.w, "%s=$(mktemp \"$_CMDCOMP_TMPDIR/%s.XXXXXX\")\n", varName, kind)
 		fmt.Fprintf(e.w, "cat > \"$%s\"\n", varName)
 		e.mu.Unlock()
 		stdinRef = varFileRef{varName: varName}
 	}
 
-	resolve := func(val string) (FileRef, error) {
-		if val == "" {
-			return nil, nil
-		}
-		if val == config.StdinMarker {
-			return stdinRef, nil
-		}
-		if after, ok := strings.CutPrefix(val, config.FilePrefix); ok {
-			return literalFileRef{path: after}, nil
-		}
-		return nil, fmt.Errorf("invalid %s '%s'", kind, val)
-	}
-
-	leftRef, err := resolve(leftVal)
+	leftRef, err := resolveInputRef(leftVal, kind, stdinRef)
 	if err != nil {
 		return nil, err
 	}
-	rightRef, err := resolve(rightVal)
+	rightRef, err := resolveInputRef(rightVal, kind, stdinRef)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +154,7 @@ func (e *DryRunExecutor) SetupSnapshot(_ context.Context, req SetupInputRequest)
 func (e *DryRunExecutor) RunHook(_ context.Context, req HookRequest) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	fmt.Fprintf(e.w, "\n# %s[%d]\n", req.Phase, req.Index)
+	e.sectionComment(fmt.Sprintf("%s[%d]", req.Phase, req.Index))
 	if len(req.ExtraEnv) > 0 {
 		// Export in a subshell scope to avoid polluting subsequent steps.
 		fmt.Fprintf(e.w, "export %s\n", strings.Join(req.ExtraEnv, " "))
@@ -156,8 +167,8 @@ func (e *DryRunExecutor) RunGenCmd(_ context.Context, req GenCmdRequest) (FileRe
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	varN := stepVar(req.Name)
-	fmt.Fprintf(e.w, "\n# %s\n", req.Name)
-	fmt.Fprintf(e.w, "%s=%s\n", varN, tmpPath(req.Name))
+	e.sectionComment(req.Name)
+	e.assignVar(varN, tmpPath(req.Name))
 	stdinRedirect := ""
 	if req.Stdin != nil {
 		stdinRedirect = fmt.Sprintf(" < %s", req.Stdin.ShellExpr())
@@ -173,20 +184,18 @@ func (e *DryRunExecutor) RunPipeline(_ context.Context, req PipelineRequest) (Fi
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	varN := stepVar(req.Name)
-	fmt.Fprintf(e.w, "\n# %s\n", req.Name)
-	fmt.Fprintf(e.w, "%s=%s\n", varN, tmpPath(req.Name))
-	// Redirect the input file into the first command; chain the rest with pipes.
-	parts := make([]string, len(req.Cmds))
-	copy(parts, req.Cmds)
-	parts[0] = parts[0] + " < " + req.Input.ShellExpr()
-	fmt.Fprintf(e.w, "%s%s > \"$%s\"\n", envPrefix(req.ExtraEnv), strings.Join(parts, " | "), varN)
+	e.sectionComment(req.Name)
+	e.assignVar(varN, tmpPath(req.Name))
+	firstCmd := req.Cmds[0] + " < " + req.Input.ShellExpr()
+	pipeline := strings.Join(append([]string{firstCmd}, req.Cmds[1:]...), " | ")
+	fmt.Fprintf(e.w, "%s%s > \"$%s\"\n", envPrefix(req.ExtraEnv), pipeline, varN)
 	return varFileRef{varName: varN}, nil
 }
 
 func (e *DryRunExecutor) RunDiff(_ context.Context, req DiffRequest) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	fmt.Fprintf(e.w, "\n# diff\n")
+	e.sectionComment("diff")
 	parts := []string{envPrefix(req.ExtraEnv) + req.Cmd, req.Left.ShellExpr(), req.Right.ShellExpr()}
 	for _, l := range req.Labels {
 		parts = append(parts, "--label", shellQuote(l))
