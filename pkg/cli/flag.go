@@ -55,26 +55,36 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		return nil, ErrExit
 	}
 
-	cs, err := LoadConfigSet(cliConfig.ConfigPath)
+	var envConfig Config
+	if err := sc.FromEnv(&envConfig, structconfig.WithEnvPrefix("CMDCOMP_")); err != nil {
+		return nil, err
+	}
+
+	configPath := envConfig.ConfigPath
+	if cliConfig.ConfigPath != "" {
+		configPath = cliConfig.ConfigPath
+	}
+
+	presetName := envConfig.PresetName
+	if cliConfig.PresetName != "" {
+		presetName = cliConfig.PresetName
+	}
+
+	cs, err := LoadConfigSet(configPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var baseConfig *Config
-	if p := cliConfig.PresetName; p != "" {
-		x, ok := cs.Find(p)
+	if presetName != "" {
+		x, ok := cs.Find(presetName)
 		if !ok {
-			return nil, fmt.Errorf("preset not found %s", p)
+			return nil, fmt.Errorf("preset not found %s", presetName)
 		}
 		baseConfig = x
-		slog.Debug("use preset", slog.String("preset", p))
+		slog.Debug("use preset", slog.String("preset", presetName))
 	} else {
 		baseConfig = newDefaultConfig()
-	}
-
-	var envConfig Config
-	if err := sc.FromEnv(&envConfig, structconfig.WithEnvPrefix("CMDCOMP_")); err != nil {
-		return nil, err
 	}
 
 	// Layered configuration merge order:
