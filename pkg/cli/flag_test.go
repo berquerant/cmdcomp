@@ -592,4 +592,131 @@ func TestParseConfig_EnvPresetAndConfig(t *testing.T) {
 	}
 }
 
+func TestParseConfig_DefaultSection(t *testing.T) {
+	const configWithDefault = `default:
+  diff: default-diff
+  shell: zsh
+  preprocess:
+    - grep default-preprocess
+  env:
+    - DEFAULT_KEY=DEFAULT_VAL
+presets:
+  custom:
+    diff: custom-diff
+    preprocess:
+      - grep custom-preprocess
+`
+	configPath := filepath.Join(t.TempDir(), "default_config.yml")
+	if !assert.Nil(t, os.WriteFile(configPath, []byte(configWithDefault), 0644)) {
+		return
+	}
+
+	for _, tc := range []struct {
+		name           string
+		env            map[string]string
+		args           []string
+		wantDiff       string
+		wantShell      string
+		wantPreprocess []string
+		wantEnv        []string
+		wantPresets    []string
+	}{
+		{
+			name: "load default section when no preset is given",
+			args: []string{
+				"--config", configPath,
+				"--", "echo", "x",
+			},
+			wantDiff:       "default-diff",
+			wantShell:      "zsh",
+			wantPreprocess: []string{"grep default-preprocess"},
+			wantEnv:        []string{"DEFAULT_KEY=DEFAULT_VAL"},
+		},
+		{
+			name: "preset overrides default section",
+			args: []string{
+				"--config", configPath,
+				"--preset", "custom",
+				"--", "echo", "x",
+			},
+			wantDiff:       "custom-diff",
+			wantShell:      "zsh", // inherited from default section
+			wantPreprocess: []string{"grep custom-preprocess"}, // overridden by custom preset
+			wantEnv:        []string{"DEFAULT_KEY=DEFAULT_VAL"}, // inherited from default section
+			wantPresets:    []string{"custom"},
+		},
+		{
+			name: "builtin preset overrides default section",
+			args: []string{
+				"--config", configPath,
+				"-P", "uc",
+				"--", "echo", "x",
+			},
+			wantDiff:       "diff -u --color", // overridden by uc preset
+			wantShell:      "zsh",            // inherited from default section
+			wantPreprocess: []string{"grep default-preprocess"},
+			wantEnv:        []string{"DEFAULT_KEY=DEFAULT_VAL"},
+			wantPresets:    []string{"uc"},
+		},
+		{
+			name: "no-default flag ignores default section",
+			args: []string{
+				"--config", configPath,
+				"--no-default",
+				"--", "echo", "x",
+			},
+			wantDiff:  "diff", // builtin default
+			wantShell: "bash", // builtin default
+		},
+		{
+			name: "no-default flag with preset only applies preset",
+			args: []string{
+				"--config", configPath,
+				"--no-default",
+				"--preset", "custom",
+				"--", "echo", "x",
+			},
+			wantDiff:       "custom-diff",
+			wantShell:      "bash", // builtin default because default section was ignored
+			wantPreprocess: []string{"grep custom-preprocess"},
+			wantPresets:    []string{"custom"},
+		},
+		{
+			name: "CMDCOMP_NO_DEFAULT env ignores default section",
+			env: map[string]string{
+				"CMDCOMP_NO_DEFAULT": "true",
+			},
+			args: []string{
+				"--config", configPath,
+				"--", "echo", "x",
+			},
+			wantDiff:  "diff",
+			wantShell: "bash",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			got, err := cli.ParseConfig(tc.args, os.Stdout, os.Stderr)
+			assert.Nil(t, err)
+			if tc.wantDiff != "" {
+				assert.Equal(t, tc.wantDiff, got.Diff)
+			}
+			if tc.wantShell != "" {
+				assert.Equal(t, tc.wantShell, got.Shell)
+			}
+			if len(tc.wantPreprocess) > 0 {
+				assert.Equal(t, tc.wantPreprocess, got.Preprocess)
+			}
+			if len(tc.wantEnv) > 0 {
+				assert.Equal(t, tc.wantEnv, got.Env)
+			}
+			if len(tc.wantPresets) > 0 {
+				assert.Equal(t, tc.wantPresets, got.PresetNames)
+			}
+		})
+	}
+}
+
 

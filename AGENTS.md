@@ -67,12 +67,18 @@ This document provides development instructions, project structure, architectura
    - `realExecutor` and `DryRunExecutor` implement the same interface. This ensures dry-run scripts and real executions never drift out of sync.
 2. **Sentinel Errors & Phase Context**:
    - Execution errors are tagged with sentinel errors (`run.ErrDiff`, `run.ErrHook`, `run.ErrGenCmd`, `run.ErrPipeline`) and wrapped with the phase name (e.g. `run left`, `run right`, `run startup[0]`, `run preprocess:left pipeline`).
-3. **Configuration & Environment Variables**:
+3. **Configuration, Presets & Environment Variables**:
    - `pkg/config/config.go` (`config.Config`) is the **single source of truth** for all runtime and CLI configuration options.
-   - CLI flags are in kebab-case (`--show-cmd-log`, `--dry-run`, `--left-preprocess`, etc.).
-   - All options can be configured via environment variables with prefix `CMDCOMP_` (e.g. `CMDCOMP_DIFF`, `CMDCOMP_SHOW_CMD_LOG`).
-   - Configuration Precedence: **Default/Preset < Environment Variables (`CMDCOMP_*`) < CLI Flags**.
-   - Slices for commands (`startup`, `interceptor`, `preprocess`, `cleanup`) use `sep:"\n"` for newline separation in env vars. Slices for env vars (`env`, `left-env`, `right-env`) use `sep:","`.
+   - **Configuration Discovery**:
+     - Automatically searched in order: `os.UserConfigDir()/cmdcomp/config.yml` -> `$HOME/.cmdcomp.yml` -> `.cmdcomp.yml`.
+     - Explicit `--config / -C` flag or `CMDCOMP_CONFIG` env var overrides discovery.
+   - **Default Section & Presets**:
+     - Config files can define an optional `default:` section, applied automatically as the base configuration unless `--no-default` (or `CMDCOMP_NO_DEFAULT=true`) is specified.
+     - Presets (`presets:`) can be specified via `--preset / -P` (or `CMDCOMP_PRESET`) multiple times or comma-separated. When multiple presets are specified, they are sequentially composed/overridden in order (`default < preset[0] < preset[1] < ...`). CLI preset flags completely override env presets.
+   - **Configuration Precedence**:
+     $$\text{Built-in defaults} \to \text{Config file default (unless --no-default)} \to \text{Presets (in order)} \to \text{Env vars (CMDCOMP\_*)} \to \text{CLI flags}$$
+   - CLI flags are in kebab-case (`--show-cmd-log`, `--dry-run`, `--left-preprocess`, `--no-default`, etc.).
+   - Slices for commands (`startup`, `interceptor`, `preprocess`, `cleanup`) use `sep:"\n"` for newline separation in env vars. Slices for env vars (`env`, `left-env`, `right-env`) and presets (`preset`) use `sep:","`.
 4. **Exit Code Conventions**:
    - `0`: No diff detected, `--dry-run`, `--version`/`--help`, or diff detected with `--success`.
    - `1`: Diff detected (diff command exited with 1).

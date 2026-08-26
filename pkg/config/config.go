@@ -63,6 +63,7 @@ type Config struct {
 	ProcessTimeout time.Duration `name:"process-timeout" usage:"maximum timeout for each individual subcommand execution (e.g. '10s', '1m')" yaml:"process-timeout,omitempty"`
 
 	Success    bool   `name:"success" usage:"exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2" yaml:"success,omitempty"`
+	NoDefault  bool   `name:"no-default" usage:"disable loading the 'default' configuration from the config file" yaml:"no-default,omitempty"`
 	ConfigPath string `name:"config" short:"C" usage:"configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)" yaml:"-"`
 	PresetNames []string `name:"preset" short:"P" split:"true" sep:"," usage:"name of preset configuration to load from config file or built-in presets. Can be specified multiple times or comma-separated" yaml:"-"`
 	Version    bool   `name:"version" usage:"display version and exit" yaml:"-"`

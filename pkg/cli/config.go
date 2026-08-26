@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/goccy/go-yaml"
@@ -21,6 +22,7 @@ func newDefaultConfig() *Config {
 }
 
 type ConfigSet struct {
+	Default *Config            `yaml:"default,omitempty"`
 	Presets map[string]*Config `yaml:"presets"`
 }
 
@@ -37,6 +39,9 @@ func (c *ConfigSet) merge(x *ConfigSet) *ConfigSet {
 		c.Presets = map[string]*Config{}
 	}
 	maps.Copy(c.Presets, x.Presets)
+	if c.Default == nil {
+		c.Default = x.Default
+	}
 	return c
 }
 
@@ -103,11 +108,15 @@ func applyDefaultValuesToConfigSet(cs *ConfigSet) {
 
 func newConfigExample() *ConfigSet {
 	return &ConfigSet{
+		Default: &Config{
+			Diff:  "diff -u",
+			Shell: "bash",
+		},
 		Presets: map[string]*Config{
 			"example": &Config{
-				Success:    true,
 				ShowCmdLog: true,
 				Debug:      true,
+				DryRun:     false,
 				Startup: []string{
 					"echo startup",
 				},
@@ -140,6 +149,12 @@ func newConfigExample() *ConfigSet {
 				Cleanup: []string{
 					"echo cleanup",
 				},
+				Stdin:          "-",
+				LeftStdin:      "-",
+				RightStdin:     "@data.txt",
+				Snapshot:       "-",
+				LeftSnapshot:   "@left.txt",
+				RightSnapshot:  "@right.txt",
 				CommonArgs: []string{
 					"echo",
 				},
@@ -149,6 +164,9 @@ func newConfigExample() *ConfigSet {
 				RightArgs: []string{
 					"common right",
 				},
+				Timeout:        time.Minute,
+				ProcessTimeout: 10 * time.Second,
+				Success:        true,
 			},
 		},
 	}

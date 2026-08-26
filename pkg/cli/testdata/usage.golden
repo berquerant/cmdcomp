@@ -181,9 +181,58 @@ cmdcomp -P json -P u -- cat -- left.json -- right.json
 
 ## Config file
 
+### Search Paths
+cmdcomp automatically searches for configuration files in the following order:
+1. `$XDG_CONFIG_HOME/cmdcomp/config.yml` (or `os.UserConfigDir()/cmdcomp/config.yml`)
+2. `$HOME/.cmdcomp.yml`
+3. `.cmdcomp.yml` (in current working directory)
+Explicit `--config / -C` flag or `CMDCOMP_CONFIG` environment variable overrides the search order.
+
 ### Format
+A configuration file is written in YAML and consists of two top-level sections:
+- `default`: Optional base configuration applied automatically to all executions (unless `--no-default` is specified).
+- `presets`: A dictionary of named configurations that can be selected or composed via `--preset / -P` (e.g. `--preset preset1,preset2`).
+
+Each preset (and `default`) accepts identical fields directly corresponding to CLI flags and options:
+
+| YAML Key | Type | Corresponding Flag | Description |
+|:---|:---|:---|:---|
+| `diff` | string | `-x, --diff` | Diff command to compare outputs (e.g. `diff -u`, `colordiff`, `dyff`) |
+| `shell` | string | `--shell` | Shell executable used to run subcommands (default: `bash`) |
+| `delimiter` | string | `--delimiter` | Delimiter separating common, left, and right args (default: `--`) |
+| `label` | boolean | `-l, --label` | Pass `--label` arguments to diff command |
+| `success` | boolean | `--success` | Exit 0 even when diffs are detected (diff status 1) |
+| `dry-run` | boolean | `-n, --dry-run` | Generate shell script capturing execution pipeline |
+| `debug` | boolean | `--debug` | Enable debug log output |
+| `show-cmd-log` | boolean | `--show-cmd-log` | Print subcommands stdout and stderr to logs |
+| `work-dir` | string | `--work-dir` | Directory for temporary files (preserves files if set) |
+| `timeout` | duration | `--timeout` | Maximum timeout for entire execution (e.g. `30s`, `2m`) |
+| `process-timeout` | duration | `--process-timeout` | Timeout for each subcommand (e.g. `10s`, `1m`) |
+| `startup` | string list | `-s, --startup` | Setup commands run sequentially before execution |
+| `interceptor` | string list | `-i, --interceptor` | Commands run between left and right commands |
+| `preprocess` | string list | `-p, --preprocess` | Pipe filter commands applied to both outputs (e.g. `jq`, `sed`) |
+| `left-preprocess` | string list | `--left-preprocess` | Filter commands applied only to left output |
+| `right-preprocess` | string list | `--right-preprocess` | Filter commands applied only to right output |
+| `cleanup` | string list | `-c, --cleanup` | Teardown commands guaranteed to execute on exit |
+| `env` | string list | `-e, --env` | Environment variables for all commands (`KEY=VAL`) |
+| `left-env` | string list | `--left-env` | Environment variables for left command only |
+| `right-env` | string list | `--right-env` | Environment variables for right command only |
+| `stdin` | string | `-I, --stdin` | Input piped to stdin (`-` for stdin, `@file` for file) |
+| `left-stdin` | string | `--left-stdin` | Input piped to left command stdin only |
+| `right-stdin` | string | `--right-stdin` | Input piped to right command stdin only |
+| `snapshot` | string | `-S, --snapshot` | Static snapshot replacing both command outputs |
+| `left-snapshot` | string | `--left-snapshot` | Static snapshot replacing left command output |
+| `right-snapshot` | string | `--right-snapshot` | Static snapshot replacing right command output |
+| `common-args` | string list | (CLI trailing args) | Preset common args prepended to both commands |
+| `left-args` | string list | (CLI trailing args) | Preset left-specific command args |
+| `right-args` | string list | (CLI trailing args) | Preset right-specific command args |
+
+Full example structure:
 
 ```yaml
+default:
+  diff: diff -u
+  shell: bash
 presets:
   example:
     show-cmd-log: true
@@ -211,16 +260,24 @@ presets:
       - Y=3
     cleanup:
       - echo cleanup
+    stdin: "-"
+    left-stdin: "-"
+    right-stdin: "@data.txt"
+    snapshot: "-"
+    left-snapshot: "@left.txt"
+    right-snapshot: "@right.txt"
     common-args:
       - echo
     left-args:
       - common left
     right-args:
       - common right
+    timeout: 1m0s
+    process-timeout: 10s
     success: true
 ```
 
-### Builtin config
+### Builtin presets
 
 ```yaml
 presets:
@@ -257,17 +314,30 @@ presets:
 ### Usage
 
 ```shell
-# use "example" preset
-# overriding "diff" option
-cmdcomp --config CONFIG_PATH --preset example -x 'diff -u'
+# automatically loads config from default search paths (~/.cmdcomp.yml, .cmdcomp.yml, etc.)
+# uses 'default' section if present in the config file
+cmdcomp -- ...
+
+# use specific config file
+cmdcomp --config CONFIG_PATH -- ...
+
+# ignore 'default' section in config file
+cmdcomp --no-default -- ...
 
 # use builtin "json" preset
 cmdcomp --preset json -- ...
+
+# compose multiple presets with config file and CLI flags
+cmdcomp --config CONFIG_PATH --preset example,u -x 'diff -u' -- ...
 ```
 
 ### Examples
 
 ```yaml
+default:
+  diff: diff -u --color
+  shell: bash
+
 presets:
   sentry:
     diff: objdiff -cv
