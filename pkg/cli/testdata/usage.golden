@@ -171,6 +171,14 @@ Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the eff
 cmdcomp --delimiter '===' -- cmdcomp --success -- echo -- base -- === branch-b === branch-c
 ```
 
+### Multiple Presets Composition
+Compose multiple presets together (e.g. combining 'json' preprocessing with 'u' unified diff):
+
+```shell
+# Compose 'json' (jq preprocess) and 'u' (diff -u) presets:
+cmdcomp -P json -P u -- cat -- left.json -- right.json
+```
+
 ## Config file
 
 ### Format
