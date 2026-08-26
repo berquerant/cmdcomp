@@ -5,6 +5,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/config"
 	"github.com/goccy/go-yaml"
@@ -113,9 +114,9 @@ func newConfigExample() *ConfigSet {
 		},
 		Presets: map[string]*Config{
 			"example": &Config{
-				Success:    true,
 				ShowCmdLog: true,
 				Debug:      true,
+				DryRun:     false,
 				Startup: []string{
 					"echo startup",
 				},
@@ -148,6 +149,12 @@ func newConfigExample() *ConfigSet {
 				Cleanup: []string{
 					"echo cleanup",
 				},
+				Stdin:          "-",
+				LeftStdin:      "-",
+				RightStdin:     "@data.txt",
+				Snapshot:       "-",
+				LeftSnapshot:   "@left.txt",
+				RightSnapshot:  "@right.txt",
 				CommonArgs: []string{
 					"echo",
 				},
@@ -157,6 +164,9 @@ func newConfigExample() *ConfigSet {
 				RightArgs: []string{
 					"common right",
 				},
+				Timeout:        time.Minute,
+				ProcessTimeout: 10 * time.Second,
+				Success:        true,
 			},
 		},
 	}
