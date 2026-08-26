@@ -138,6 +138,17 @@ var BuiltinExamples = []Example{
 		Command:    "cmdcomp --delimiter '===' -- cmdcomp --success -- echo -- base -- === branch-b === branch-c",
 		WantStatus: 1,
 	},
+	{
+		Title:       "Multiple Presets Composition",
+		Description: "Compose multiple presets together (e.g. combining 'json' preprocessing with 'u' unified diff):",
+		ShellDoc:   `# Compose 'json' (jq preprocess) and 'u' (diff -u) presets:`,
+		SetupFiles: map[string]string{
+			"left.json":  "{\"b\": 1, \"a\": 2}\n",
+			"right.json": "{\"a\": 2, \"b\": 3}\n",
+		},
+		Command:    `cmdcomp -P json -P u -- cat -- left.json -- right.json`,
+		WantStatus: 1,
+	},
 }
 
 // RenderExamples formats BuiltinExamples into markdown sections for usage and README.

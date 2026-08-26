@@ -173,6 +173,14 @@ Compare the diff outputs of two inner cmdcomp executions (e.g. comparing the eff
 cmdcomp --delimiter '===' -- cmdcomp --success -- echo -- base -- === branch-b === branch-c
 ```
 
+### Multiple Presets Composition
+Compose multiple presets together (e.g. combining 'json' preprocessing with 'u' unified diff):
+
+```shell
+# Compose 'json' (jq preprocess) and 'u' (diff -u) presets:
+cmdcomp -P json -P u -- cat -- left.json -- right.json
+```
+
 ## Config file
 
 ### Format
@@ -308,7 +316,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
       --left-snapshot string           use input as left command output without executing the left command ('-' for stdin, '@filename' for file)
       --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
   -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
-  -P, --preset string                  name of preset configuration to load from config file or built-in presets (e.g. 'json', 'yml', 'helm', 'k8s', 'dyff', 'u', 'uc')
+  -P, --preset stringArray             name of preset configuration to load from config file or built-in presets. Can be specified multiple times or comma-separated
       --process-timeout duration       maximum timeout for each individual subcommand execution (e.g. '10s', '1m')
       --right-env stringArray          environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
       --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines

@@ -49,11 +49,11 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				ConfigPath: configPath,
-				PresetName: "base",
-				Diff:       "diff",
-				Delimiter:  "--",
-				Shell:      "bash",
+				ConfigPath:  configPath,
+				PresetNames: []string{"base"},
+				Diff:        "diff",
+				Delimiter:   "--",
+				Shell:       "bash",
 				Preprocess: []string{
 					"grep base",
 				},
@@ -69,10 +69,10 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				PresetName: "u",
-				Diff:       "diff -u",
-				Delimiter:  "--",
-				Shell:      "bash",
+				PresetNames: []string{"u"},
+				Diff:        "diff -u",
+				Delimiter:   "--",
+				Shell:       "bash",
 				CommonArgs: []string{
 					"echo", "x",
 				},
@@ -85,10 +85,10 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				PresetName: "uc",
-				Diff:       "diff -u --color",
-				Delimiter:  "--",
-				Shell:      "bash",
+				PresetNames: []string{"uc"},
+				Diff:        "diff -u --color",
+				Delimiter:   "--",
+				Shell:       "bash",
 				CommonArgs: []string{
 					"echo", "x",
 				},
@@ -101,10 +101,53 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				PresetName: "u",
-				Diff:       "diff -u",
-				Delimiter:  "--",
-				Shell:      "bash",
+				PresetNames: []string{"u"},
+				Diff:        "diff -u",
+				Delimiter:   "--",
+				Shell:       "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "use multiple presets composed in order",
+			args: []string{
+				"--config", configPath,
+				"-P", "base",
+				"-P", "u",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				ConfigPath:  configPath,
+				PresetNames: []string{"base", "u"},
+				Diff:        "diff -u",
+				Delimiter:   "--",
+				Shell:       "bash",
+				Preprocess: []string{
+					"grep base",
+				},
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "use comma-separated presets",
+			args: []string{
+				"--config", configPath,
+				"--preset", "base,uc",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				ConfigPath:  configPath,
+				PresetNames: []string{"base", "uc"},
+				Diff:        "diff -u --color",
+				Delimiter:   "--",
+				Shell:       "bash",
+				Preprocess: []string{
+					"grep base",
+				},
 				CommonArgs: []string{
 					"echo", "x",
 				},
@@ -190,11 +233,11 @@ func TestParseConfig(t *testing.T) {
 				"--", "echo", "x",
 			},
 			want: &cli.Config{
-				ConfigPath: configPath,
-				PresetName: "base",
-				Diff:       "diff",
-				Delimiter:  "--",
-				Shell:      "bash",
+				ConfigPath:  configPath,
+				PresetNames: []string{"base"},
+				Diff:        "diff",
+				Delimiter:   "--",
+				Shell:       "bash",
 				Preprocess: []string{
 					"grep base",
 				},
@@ -417,8 +460,16 @@ func TestParseConfig_EnvPresetAndConfig(t *testing.T) {
   custom:
     diff: custom-yml-diff
     shell: zsh
+    preprocess:
+      - grep custom
+    env:
+      - K1=V1
   other:
     diff: other-yml-diff
+    preprocess:
+      - grep other
+    env:
+      - K2=V2
 `
 	configPath := filepath.Join(t.TempDir(), "custom.yml")
 	if !assert.Nil(t, os.WriteFile(configPath, []byte(customYml), 0644)) {
@@ -426,23 +477,39 @@ func TestParseConfig_EnvPresetAndConfig(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		name       string
-		env        map[string]string
-		args       []string
-		wantDiff   string
-		wantShell  string
-		wantConfig string
-		wantPreset string
-		wantErrMsg string
+		name           string
+		env            map[string]string
+		args           []string
+		wantDiff       string
+		wantShell      string
+		wantConfig     string
+		wantPresets    []string
+		wantPreprocess []string
+		wantEnv        []string
+		wantErrMsg     string
 	}{
 		{
 			name: "env preset builtin",
 			env: map[string]string{
 				"CMDCOMP_PRESET": "uc",
 			},
-			args:       []string{"--", "echo", "x"},
-			wantDiff:   "diff -u --color",
-			wantPreset: "uc",
+			args:        []string{"--", "echo", "x"},
+			wantDiff:    "diff -u --color",
+			wantPresets: []string{"uc"},
+		},
+		{
+			name: "env multiple presets comma separated",
+			env: map[string]string{
+				"CMDCOMP_CONFIG": configPath,
+				"CMDCOMP_PRESET": "custom,other",
+			},
+			args:           []string{"--", "echo", "x"},
+			wantDiff:       "other-yml-diff",
+			wantShell:      "zsh",
+			wantConfig:     configPath,
+			wantPresets:    []string{"custom", "other"},
+			wantPreprocess: []string{"grep other"},
+			wantEnv:        []string{"K2=V2"},
 		},
 		{
 			name: "env config and preset",
@@ -450,21 +517,25 @@ func TestParseConfig_EnvPresetAndConfig(t *testing.T) {
 				"CMDCOMP_CONFIG": configPath,
 				"CMDCOMP_PRESET": "custom",
 			},
-			args:       []string{"--", "echo", "x"},
-			wantDiff:   "custom-yml-diff",
-			wantShell:  "zsh",
-			wantConfig: configPath,
-			wantPreset: "custom",
+			args:           []string{"--", "echo", "x"},
+			wantDiff:       "custom-yml-diff",
+			wantShell:      "zsh",
+			wantConfig:     configPath,
+			wantPresets:    []string{"custom"},
+			wantPreprocess: []string{"grep custom"},
+			wantEnv:        []string{"K1=V1"},
 		},
 		{
-			name: "flag overrides env preset",
+			name: "flag overrides env preset completely",
 			env: map[string]string{
 				"CMDCOMP_CONFIG": configPath,
-				"CMDCOMP_PRESET": "custom",
+				"CMDCOMP_PRESET": "custom,uc",
 			},
-			args:       []string{"--preset", "other", "--", "echo", "x"},
-			wantDiff:   "other-yml-diff",
-			wantPreset: "other",
+			args:           []string{"--preset", "other", "--", "echo", "x"},
+			wantDiff:       "other-yml-diff",
+			wantPresets:    []string{"other"},
+			wantPreprocess: []string{"grep other"},
+			wantEnv:        []string{"K2=V2"},
 		},
 		{
 			name: "flag overrides env config",
@@ -472,11 +543,13 @@ func TestParseConfig_EnvPresetAndConfig(t *testing.T) {
 				"CMDCOMP_CONFIG": "non-existent-config.yml",
 				"CMDCOMP_PRESET": "custom",
 			},
-			args:       []string{"--config", configPath, "--", "echo", "x"},
-			wantDiff:   "custom-yml-diff",
-			wantShell:  "zsh",
-			wantConfig: configPath,
-			wantPreset: "custom",
+			args:           []string{"--config", configPath, "--", "echo", "x"},
+			wantDiff:       "custom-yml-diff",
+			wantShell:      "zsh",
+			wantConfig:     configPath,
+			wantPresets:    []string{"custom"},
+			wantPreprocess: []string{"grep custom"},
+			wantEnv:        []string{"K1=V1"},
 		},
 		{
 			name: "env preset not found",
@@ -506,10 +579,17 @@ func TestParseConfig_EnvPresetAndConfig(t *testing.T) {
 			if tc.wantConfig != "" {
 				assert.Equal(t, tc.wantConfig, got.ConfigPath)
 			}
-			if tc.wantPreset != "" {
-				assert.Equal(t, tc.wantPreset, got.PresetName)
+			if len(tc.wantPresets) > 0 {
+				assert.Equal(t, tc.wantPresets, got.PresetNames)
+			}
+			if len(tc.wantPreprocess) > 0 {
+				assert.Equal(t, tc.wantPreprocess, got.Preprocess)
+			}
+			if len(tc.wantEnv) > 0 {
+				assert.Equal(t, tc.wantEnv, got.Env)
 			}
 		})
 	}
 }
+
 

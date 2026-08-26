@@ -65,9 +65,9 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		configPath = cliConfig.ConfigPath
 	}
 
-	presetName := envConfig.PresetName
-	if cliConfig.PresetName != "" {
-		presetName = cliConfig.PresetName
+	presetNames := envConfig.PresetNames
+	if len(cliConfig.PresetNames) > 0 {
+		presetNames = cliConfig.PresetNames
 	}
 
 	cs, err := LoadConfigSet(configPath)
@@ -75,21 +75,23 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		return nil, err
 	}
 
-	var baseConfig *Config
-	if presetName != "" {
-		x, ok := cs.Find(presetName)
+	merger := structconfig.NewMerger[Config]()
+	baseConfig := newDefaultConfig()
+	for _, p := range presetNames {
+		x, ok := cs.Find(p)
 		if !ok {
-			return nil, fmt.Errorf("preset not found %s", presetName)
+			return nil, fmt.Errorf("preset not found %s", p)
 		}
-		baseConfig = x
-		slog.Debug("use preset", slog.String("preset", presetName))
-	} else {
-		baseConfig = newDefaultConfig()
+		mergedPreset, err := merger.Merge(*baseConfig, *x)
+		if err != nil {
+			return nil, err
+		}
+		baseConfig = &mergedPreset
+		slog.Debug("use preset", slog.String("preset", p))
 	}
 
 	// Layered configuration merge order:
-	// Precedence: baseConfig (default or preset) < envConfig (CMDCOMP_*) < cliConfig (CLI flags)
-	merger := structconfig.NewMerger[Config]()
+	// Precedence: baseConfig (default or combined presets) < envConfig (CMDCOMP_*) < cliConfig (CLI flags)
 	baseAndEnv, err := merger.Merge(*baseConfig, envConfig)
 	if err != nil {
 		return nil, err
