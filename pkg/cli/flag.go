@@ -77,6 +77,17 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 
 	merger := structconfig.NewMerger[Config]()
 	baseConfig := newDefaultConfig()
+
+	noDefault := envConfig.NoDefault || cliConfig.NoDefault
+	if !noDefault && cs.Default != nil {
+		mergedDefault, err := merger.Merge(*baseConfig, *cs.Default)
+		if err != nil {
+			return nil, err
+		}
+		baseConfig = &mergedDefault
+		slog.Debug("use config default")
+	}
+
 	for _, p := range presetNames {
 		x, ok := cs.Find(p)
 		if !ok {

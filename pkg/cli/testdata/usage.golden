@@ -184,6 +184,9 @@ cmdcomp -P json -P u -- cat -- left.json -- right.json
 ### Format
 
 ```yaml
+default:
+  diff: diff -u
+  shell: bash
 presets:
   example:
     show-cmd-log: true
