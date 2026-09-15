@@ -194,6 +194,16 @@ echo "${X}=${Y}"
 			wantStatus: 1,
 		},
 		{
+			title: "preprocess left and right short flags -L -R",
+			arg:   `-L 'sed "s|a|c|"' -R 'sed "s|a|d|"' -- echo -- a -- a`,
+			want: `1c1
+< c
+---
+> d
+`,
+			wantStatus: 1,
+		},
+		{
 			title: "preprocess awk",
 			arg:   `-p "awk '{print \$1\"x\"}'" -- echo -- a -- b`,
 			want: `1c1
@@ -206,6 +216,16 @@ echo "${X}=${Y}"
 		{
 			title: "env script",
 			arg:   `--env "X=x" --left-env "Y=1" --right-env "Y=2" -- ` + envEcho,
+			want: `1c1
+< x=1
+---
+> x=2
+`,
+			wantStatus: 1,
+		},
+		{
+			title: "env script short flags -e -E -F",
+			arg:   `-e "X=x" -E "Y=1" -F "Y=2" -- ` + envEcho,
 			want: `1c1
 < x=1
 ---
@@ -330,6 +350,37 @@ echo "${X}=${Y}"
 			arg:   `--left-stdin - --right-stdin - -- cat`,
 			stdin: "shared input\n",
 			want:  "",
+		},
+		{
+			title: "left-stdin and right-stdin short flags -J -K",
+			arg: func() string {
+				f := filepath.Join(t.TempDir(), "right.txt")
+				_ = os.WriteFile(f, []byte("right content\n"), 0644)
+				return fmt.Sprintf(`-J - -K '@%s' -- cat`, f)
+			}(),
+			stdin: "left content\n",
+			want: `1c1
+< left content
+---
+> right content
+`,
+			wantStatus: 1,
+		},
+		{
+			title: "left-snapshot and right-snapshot short flags -T -U",
+			arg: func() string {
+				f1 := filepath.Join(t.TempDir(), "f1.txt")
+				f2 := filepath.Join(t.TempDir(), "f2.txt")
+				_ = os.WriteFile(f1, []byte("snap left\n"), 0644)
+				_ = os.WriteFile(f2, []byte("snap right\n"), 0644)
+				return fmt.Sprintf(`-T '@%s' -U '@%s'`, f1, f2)
+			}(),
+			want: `1c1
+< snap left
+---
+> snap right
+`,
+			wantStatus: 1,
 		},
 	} {
 		tc.run(t, bin)

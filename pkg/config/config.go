@@ -29,8 +29,8 @@ type Config struct {
 	Startup         []string      `name:"startup" short:"s" split:"true" sep:"\n" usage:"command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"startup,omitempty"`
 	Interceptor     []string      `name:"interceptor" short:"i" split:"true" sep:"\n" usage:"command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines" yaml:"interceptor,omitempty"`
 	Preprocess      []string      `name:"preprocess" short:"p" split:"true" sep:"\n" usage:"filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"preprocess,omitempty"`
-	LeftPreprocess  []string      `name:"left-preprocess" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"left-preprocess,omitempty"`
-	RightPreprocess []string      `name:"right-preprocess" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"right-preprocess,omitempty"`
+	LeftPreprocess  []string      `name:"left-preprocess" short:"L" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"left-preprocess,omitempty"`
+	RightPreprocess []string      `name:"right-preprocess" short:"R" split:"true" sep:"\n" usage:"additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines" yaml:"right-preprocess,omitempty"`
 	Diff            string        `name:"diff" short:"x" default:"diff" usage:"diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c')" yaml:"diff,omitempty"`
 	WorkDir         string        `name:"work-dir" usage:"working directory for temporary output files. When specified, temporary files are preserved after execution" yaml:"work-dir,omitempty"`
 	Shell           string        `name:"shell" default:"bash" usage:"shell executable used to run subcommands" yaml:"shell,omitempty"`
@@ -38,19 +38,19 @@ type Config struct {
 	UseLabel        bool          `name:"label" short:"l" usage:"pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)" yaml:"label,omitempty"`
 	// Environment variable pairs (KEY=VALUE): separated by comma (,) in env vars.
 	Env             []string      `name:"env" short:"e" split:"true" sep:"," usage:"environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"env,omitempty"`
-	LeftEnv         []string      `name:"left-env" split:"true" sep:"," usage:"environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"left-env,omitempty"`
-	RightEnv        []string      `name:"right-env" split:"true" sep:"," usage:"environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"right-env,omitempty"`
+	LeftEnv         []string      `name:"left-env" short:"E" split:"true" sep:"," usage:"environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"left-env,omitempty"`
+	RightEnv        []string      `name:"right-env" short:"F" split:"true" sep:"," usage:"environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated" yaml:"right-env,omitempty"`
 	Cleanup         []string      `name:"cleanup" short:"c" split:"true" sep:"\n" usage:"command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines" yaml:"cleanup,omitempty"`
 	Stdin           string        `name:"stdin" short:"I" usage:"pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)" yaml:"stdin,omitempty"`
-	LeftStdin       string        `name:"left-stdin" usage:"pass input to stdin of left command only ('-' for stdin, '@filename' for file)" yaml:"left-stdin,omitempty"`
-	RightStdin      string        `name:"right-stdin" usage:"pass input to stdin of right command only ('-' for stdin, '@filename' for file)" yaml:"right-stdin,omitempty"`
+	LeftStdin       string        `name:"left-stdin" short:"J" usage:"pass input to stdin of left command only ('-' for stdin, '@filename' for file)" yaml:"left-stdin,omitempty"`
+	RightStdin      string        `name:"right-stdin" short:"K" usage:"pass input to stdin of right command only ('-' for stdin, '@filename' for file)" yaml:"right-stdin,omitempty"`
 	// Snapshot flags: instead of executing the command, use the given input directly as the command output.
 	// '-' reads from stdin; '@filename' reads from the specified file.
 	// LeftSnapshot / RightSnapshot take precedence over Snapshot for the respective side.
 	// If both left and right snapshot to '-', stdin is read once and shared.
 	Snapshot      string        `name:"snapshot" short:"S" usage:"use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)" yaml:"snapshot,omitempty"`
-	LeftSnapshot  string        `name:"left-snapshot" usage:"use input as left command output without executing the left command ('-' for stdin, '@filename' for file)" yaml:"left-snapshot,omitempty"`
-	RightSnapshot string        `name:"right-snapshot" usage:"use input as right command output without executing the right command ('-' for stdin, '@filename' for file)" yaml:"right-snapshot,omitempty"`
+	LeftSnapshot  string        `name:"left-snapshot" short:"T" usage:"use input as left command output without executing the left command ('-' for stdin, '@filename' for file)" yaml:"left-snapshot,omitempty"`
+	RightSnapshot string        `name:"right-snapshot" short:"U" usage:"use input as right command output without executing the right command ('-' for stdin, '@filename' for file)" yaml:"right-snapshot,omitempty"`
 
 	CommonArgs []string `name:"-" yaml:"common-args,omitempty"`
 	LeftArgs   []string `name:"-" yaml:"left-args,omitempty"`

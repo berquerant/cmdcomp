@@ -211,18 +211,18 @@ Each preset (and `default`) accepts identical fields directly corresponding to C
 | `startup` | string list | `-s, --startup` | Setup commands run sequentially before execution |
 | `interceptor` | string list | `-i, --interceptor` | Commands run between left and right commands |
 | `preprocess` | string list | `-p, --preprocess` | Pipe filter commands applied to both outputs (e.g. `jq`, `sed`) |
-| `left-preprocess` | string list | `--left-preprocess` | Filter commands applied only to left output |
-| `right-preprocess` | string list | `--right-preprocess` | Filter commands applied only to right output |
+| `left-preprocess` | string list | `-L, --left-preprocess` | Filter commands applied only to left output |
+| `right-preprocess` | string list | `-R, --right-preprocess` | Filter commands applied only to right output |
 | `cleanup` | string list | `-c, --cleanup` | Teardown commands guaranteed to execute on exit |
 | `env` | string list | `-e, --env` | Environment variables for all commands (`KEY=VAL`) |
-| `left-env` | string list | `--left-env` | Environment variables for left command only |
-| `right-env` | string list | `--right-env` | Environment variables for right command only |
+| `left-env` | string list | `-E, --left-env` | Environment variables for left command only |
+| `right-env` | string list | `-F, --right-env` | Environment variables for right command only |
 | `stdin` | string | `-I, --stdin` | Input piped to stdin (`-` for stdin, `@file` for file) |
-| `left-stdin` | string | `--left-stdin` | Input piped to left command stdin only |
-| `right-stdin` | string | `--right-stdin` | Input piped to right command stdin only |
+| `left-stdin` | string | `-J, --left-stdin` | Input piped to left command stdin only |
+| `right-stdin` | string | `-K, --right-stdin` | Input piped to right command stdin only |
 | `snapshot` | string | `-S, --snapshot` | Static snapshot replacing both command outputs |
-| `left-snapshot` | string | `--left-snapshot` | Static snapshot replacing left command output |
-| `right-snapshot` | string | `--right-snapshot` | Static snapshot replacing right command output |
+| `left-snapshot` | string | `-T, --left-snapshot` | Static snapshot replacing left command output |
+| `right-snapshot` | string | `-U, --right-snapshot` | Static snapshot replacing right command output |
 | `common-args` | string list | (CLI trailing args) | Preset common args prepended to both commands |
 | `left-args` | string list | (CLI trailing args) | Preset left-specific command args |
 | `right-args` | string list | (CLI trailing args) | Preset right-specific command args |
