@@ -213,18 +213,18 @@ Each preset (and `default`) accepts identical fields directly corresponding to C
 | `startup` | string list | `-s, --startup` | Setup commands run sequentially before execution |
 | `interceptor` | string list | `-i, --interceptor` | Commands run between left and right commands |
 | `preprocess` | string list | `-p, --preprocess` | Pipe filter commands applied to both outputs (e.g. `jq`, `sed`) |
-| `left-preprocess` | string list | `--left-preprocess` | Filter commands applied only to left output |
-| `right-preprocess` | string list | `--right-preprocess` | Filter commands applied only to right output |
+| `left-preprocess` | string list | `-L, --left-preprocess` | Filter commands applied only to left output |
+| `right-preprocess` | string list | `-R, --right-preprocess` | Filter commands applied only to right output |
 | `cleanup` | string list | `-c, --cleanup` | Teardown commands guaranteed to execute on exit |
 | `env` | string list | `-e, --env` | Environment variables for all commands (`KEY=VAL`) |
-| `left-env` | string list | `--left-env` | Environment variables for left command only |
-| `right-env` | string list | `--right-env` | Environment variables for right command only |
+| `left-env` | string list | `-E, --left-env` | Environment variables for left command only |
+| `right-env` | string list | `-F, --right-env` | Environment variables for right command only |
 | `stdin` | string | `-I, --stdin` | Input piped to stdin (`-` for stdin, `@file` for file) |
-| `left-stdin` | string | `--left-stdin` | Input piped to left command stdin only |
-| `right-stdin` | string | `--right-stdin` | Input piped to right command stdin only |
+| `left-stdin` | string | `-J, --left-stdin` | Input piped to left command stdin only |
+| `right-stdin` | string | `-K, --right-stdin` | Input piped to right command stdin only |
 | `snapshot` | string | `-S, --snapshot` | Static snapshot replacing both command outputs |
-| `left-snapshot` | string | `--left-snapshot` | Static snapshot replacing left command output |
-| `right-snapshot` | string | `--right-snapshot` | Static snapshot replacing right command output |
+| `left-snapshot` | string | `-T, --left-snapshot` | Static snapshot replacing left command output |
+| `right-snapshot` | string | `-U, --right-snapshot` | Static snapshot replacing right command output |
 | `common-args` | string list | (CLI trailing args) | Preset common args prepended to both commands |
 | `left-args` | string list | (CLI trailing args) | Preset left-specific command args |
 | `right-args` | string list | (CLI trailing args) | Preset right-specific command args |
@@ -381,18 +381,18 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -e, --env stringArray                environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated
   -i, --interceptor stringArray        command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines
   -l, --label                          pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
-      --left-env stringArray           environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
-      --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
-      --left-snapshot string           use input as left command output without executing the left command ('-' for stdin, '@filename' for file)
-      --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
+  -E, --left-env stringArray           environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
+  -L, --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+  -T, --left-snapshot string           use input as left command output without executing the left command ('-' for stdin, '@filename' for file)
+  -J, --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
       --no-default                     disable loading the 'default' configuration from the config file
   -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
   -P, --preset stringArray             name of preset configuration to load from config file or built-in presets. Can be specified multiple times or comma-separated
       --process-timeout duration       maximum timeout for each individual subcommand execution (e.g. '10s', '1m')
-      --right-env stringArray          environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
-      --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
-      --right-snapshot string          use input as right command output without executing the right command ('-' for stdin, '@filename' for file)
-      --right-stdin string             pass input to stdin of right command only ('-' for stdin, '@filename' for file)
+  -F, --right-env stringArray          environment variables passed only to right command and right preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
+  -R, --right-preprocess stringArray   additional filter pipeline command(s) applied only to right output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
+  -U, --right-snapshot string          use input as right command output without executing the right command ('-' for stdin, '@filename' for file)
+  -K, --right-stdin string             pass input to stdin of right command only ('-' for stdin, '@filename' for file)
       --shell string                   shell executable used to run subcommands (default "bash")
       --show-cmd-log                   print stdout and stderr of executed subcommands to log output
   -S, --snapshot string                use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)

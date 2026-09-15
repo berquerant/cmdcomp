@@ -210,7 +210,7 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "stdin and snapshot short flags",
+			name: "stdin short flag",
 			args: []string{
 				"-I", "-",
 				"--", "echo", "x",
@@ -223,6 +223,63 @@ func TestParseConfig(t *testing.T) {
 				CommonArgs: []string{
 					"echo", "x",
 				},
+			},
+		},
+		{
+			name: "snapshot short flag",
+			args: []string{
+				"-S", "@snap.txt",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				Snapshot:  "@snap.txt",
+				Diff:      "diff",
+				Delimiter: "--",
+				Shell:     "bash",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "left and right short flags -L, -R, -E, -F, -J, -K, -T, -U",
+			args: []string{
+				"-L", "grep left1",
+				"-L", "grep left2",
+				"-R", "grep right1",
+				"-E", "LK1=LV1",
+				"-F", "RK1=RV1",
+				"-J", "-",
+				"-K", "@rstdin.txt",
+				"--", "echo", "x",
+			},
+			want: &cli.Config{
+				Diff:            "diff",
+				Delimiter:       "--",
+				Shell:           "bash",
+				LeftPreprocess:  []string{"grep left1", "grep left2"},
+				RightPreprocess: []string{"grep right1"},
+				LeftEnv:         []string{"LK1=LV1"},
+				RightEnv:        []string{"RK1=RV1"},
+				LeftStdin:       "-",
+				RightStdin:      "@rstdin.txt",
+				CommonArgs: []string{
+					"echo", "x",
+				},
+			},
+		},
+		{
+			name: "left and right snapshot short flags -T, -U",
+			args: []string{
+				"-T", "@left.txt",
+				"-U", "@right.txt",
+			},
+			want: &cli.Config{
+				Diff:          "diff",
+				Delimiter:     "--",
+				Shell:         "bash",
+				LeftSnapshot:  "@left.txt",
+				RightSnapshot: "@right.txt",
 			},
 		},
 		{
