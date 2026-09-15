@@ -21,8 +21,7 @@ func main() {
 
 	if err := run.Main(c); err != nil {
 		if errors.Is(err, run.ErrDiff) {
-			var exitErr *exec.ExitError
-			if errors.As(err, &exitErr) {
+			if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 				if c.Success && exitErr.ExitCode() == 1 {
 					return
 				}
