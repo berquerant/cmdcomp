@@ -119,9 +119,11 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 	c.Writer = stdout
 	c.SetupLogger(stderr)
 	slog.Debug("parse args", slog.Any("args", before))
-	slog.Debug("init args", slog.Any("args", after))
-	if err := c.Init(after); err != nil {
-		return nil, err
+	if !c.MCP {
+		slog.Debug("init args", slog.Any("args", after))
+		if err := c.Init(after); err != nil {
+			return nil, err
+		}
 	}
 
 	cj, _ := json.Marshal(c)

@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 
 	"github.com/berquerant/cmdcomp/pkg/cli"
+	"github.com/berquerant/cmdcomp/pkg/mcp"
 	"github.com/berquerant/cmdcomp/pkg/run"
 )
 
@@ -17,6 +21,16 @@ func main() {
 	}
 	if err != nil {
 		fail(err)
+	}
+
+	if c.MCP {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		s := mcp.NewServer(c)
+		if err := s.Serve(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			fail(err)
+		}
+		return
 	}
 
 	if err := run.Main(c); err != nil {

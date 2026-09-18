@@ -8,6 +8,80 @@ cmdcomp -- compare the output of two commands with optional preprocessing and cu
 cmdcomp [flags] -- COMMON_ARGS [-- LEFT_ARGS [-- RIGHT_ARGS]]
 ```
 
+## MCP Server
+
+cmdcomp can run as a Model Context Protocol (MCP) server over stdio using the `--mcp` flag. This allows LLMs and AI agents to invoke cmdcomp as a tool.
+
+### MCP Server Registration Example
+
+Add the following to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "cmdcomp": {
+      "command": "cmdcomp",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+### Tool Call Arguments Example (JSON)
+
+When an AI agent invokes tools on the cmdcomp MCP server, use JSON arguments as follows:
+
+```json
+// 1. Basic command diff
+{
+  "name": "cmdcomp_diff",
+  "arguments": {
+    "common_args": ["echo"],
+    "left_args": ["hello left"],
+    "right_args": ["hello right"]
+  }
+}
+
+// 2. Diff with preset and custom diff tool
+{
+  "name": "cmdcomp_diff",
+  "arguments": {
+    "presets": ["json"],
+    "diff": "diff -u",
+    "common_args": ["cat"],
+    "left_args": ["left.json"],
+    "right_args": ["right.json"]
+  }
+}
+
+// 3. Diff using literal stdin content
+{
+  "name": "cmdcomp_diff",
+  "arguments": {
+    "common_args": ["cat"],
+    "left_preprocess": ["sed 's/foo/bar/'"],
+    "right_preprocess": ["sed 's/foo/baz/'"],
+    "stdin_content": "foo 123\n"
+  }
+}
+
+// 4. Generate dry-run script
+{
+  "name": "cmdcomp_dryrun",
+  "arguments": {
+    "common_args": ["echo"],
+    "left_args": ["a"],
+    "right_args": ["b"]
+  }
+}
+```
+
+### Available Tools
+
+- `cmdcomp_diff`: Compare stdout of two commands or snapshots with optional preprocessing filters and custom diff tools.
+- `cmdcomp_dryrun`: Generate an executable bash script capturing the full execution pipeline.
+- `cmdcomp_list_presets`: List available presets defined in configuration files or built-in presets.
+
 ## Lifecycle & Data Flow
 
 cmdcomp executes subcommands and pipelines in the following order:
@@ -385,6 +459,7 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -L, --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
   -T, --left-snapshot string           use input as left command output without executing the left command ('-' for stdin, '@filename' for file)
   -J, --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
+      --mcp                            start MCP server on stdio
       --no-default                     disable loading the 'default' configuration from the config file
   -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
   -P, --preset stringArray             name of preset configuration to load from config file or built-in presets. Can be specified multiple times or comma-separated

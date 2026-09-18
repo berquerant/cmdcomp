@@ -12,14 +12,16 @@ import (
 type UsageBuilder struct{}
 
 type usageTemplateData struct {
-	UsageCode          string
-	LifecycleCode      string
-	ExamplesCode       string
-	ConfigFormatCode   string
-	BuiltinConfigCode  string
-	ConfigUsageCode    string
-	ConfigExamplesCode string
-	SentryShellCode    string
+	UsageCode               string
+	MCPConfigCode           string
+	MCPToolCallExamplesCode string
+	LifecycleCode           string
+	ExamplesCode            string
+	ConfigFormatCode        string
+	BuiltinConfigCode       string
+	ConfigUsageCode         string
+	ConfigExamplesCode      string
+	SentryShellCode         string
 }
 
 func (UsageBuilder) code(lang, s string) string {
@@ -107,11 +109,89 @@ func (u UsageBuilder) sentryShellCode() string {
 cmdcomp --config CONFIG --preset sentry --left-env 'VERSION=28.0.3' --right-env 'VERSION=29.5.1'`)
 }
 
+func (u UsageBuilder) mcpConfigCode() string {
+	return u.code("json", `{
+  "mcpServers": {
+    "cmdcomp": {
+      "command": "cmdcomp",
+      "args": ["--mcp"]
+    }
+  }
+}`)
+}
+
+func (u UsageBuilder) mcpToolCallExamplesCode() string {
+	return u.code("json", `// 1. Basic command diff
+{
+  "name": "cmdcomp_diff",
+  "arguments": {
+    "common_args": ["echo"],
+    "left_args": ["hello left"],
+    "right_args": ["hello right"]
+  }
+}
+
+// 2. Diff with preset and custom diff tool
+{
+  "name": "cmdcomp_diff",
+  "arguments": {
+    "presets": ["json"],
+    "diff": "diff -u",
+    "common_args": ["cat"],
+    "left_args": ["left.json"],
+    "right_args": ["right.json"]
+  }
+}
+
+// 3. Diff using literal stdin content
+{
+  "name": "cmdcomp_diff",
+  "arguments": {
+    "common_args": ["cat"],
+    "left_preprocess": ["sed 's/foo/bar/'"],
+    "right_preprocess": ["sed 's/foo/baz/'"],
+    "stdin_content": "foo 123\n"
+  }
+}
+
+// 4. Generate dry-run script
+{
+  "name": "cmdcomp_dryrun",
+  "arguments": {
+    "common_args": ["echo"],
+    "left_args": ["a"],
+    "right_args": ["b"]
+  }
+}`)
+}
+
 var rawUsageTemplate = `cmdcomp -- compare the output of two commands with optional preprocessing and customizable diff
 
 ## Usage
 
 {{.UsageCode}}
+
+## MCP Server
+
+cmdcomp can run as a Model Context Protocol (MCP) server over stdio using the ` + "`--mcp`" + ` flag. This allows LLMs and AI agents to invoke cmdcomp as a tool.
+
+### MCP Server Registration Example
+
+Add the following to your MCP client configuration:
+
+{{.MCPConfigCode}}
+
+### Tool Call Arguments Example (JSON)
+
+When an AI agent invokes tools on the cmdcomp MCP server, use JSON arguments as follows:
+
+{{.MCPToolCallExamplesCode}}
+
+### Available Tools
+
+- ` + "`cmdcomp_diff`" + `: Compare stdout of two commands or snapshots with optional preprocessing filters and custom diff tools.
+- ` + "`cmdcomp_dryrun`" + `: Generate an executable bash script capturing the full execution pipeline.
+- ` + "`cmdcomp_list_presets`" + `: List available presets defined in configuration files or built-in presets.
 
 ## Lifecycle & Data Flow
 
@@ -226,14 +306,16 @@ var parsedUsageTemplate = template.Must(template.New("usage").Parse(rawUsageTemp
 
 func (u UsageBuilder) Build() string {
 	data := usageTemplateData{
-		UsageCode:          u.usageCode(),
-		LifecycleCode:      u.lifecycleCode(),
-		ExamplesCode:       u.examplesCode(),
-		ConfigFormatCode:   u.configFormatCode(),
-		BuiltinConfigCode:  u.builtinConfigCode(),
-		ConfigUsageCode:    u.configUsageCode(),
-		ConfigExamplesCode: u.configExamplesCode(),
-		SentryShellCode:    u.sentryShellCode(),
+		UsageCode:               u.usageCode(),
+		MCPConfigCode:           u.mcpConfigCode(),
+		MCPToolCallExamplesCode: u.mcpToolCallExamplesCode(),
+		LifecycleCode:           u.lifecycleCode(),
+		ExamplesCode:            u.examplesCode(),
+		ConfigFormatCode:        u.configFormatCode(),
+		BuiltinConfigCode:       u.builtinConfigCode(),
+		ConfigUsageCode:         u.configUsageCode(),
+		ConfigExamplesCode:      u.configExamplesCode(),
+		SentryShellCode:         u.sentryShellCode(),
 	}
 
 	var buf bytes.Buffer
