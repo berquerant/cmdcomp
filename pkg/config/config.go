@@ -67,6 +67,7 @@ type Config struct {
 	ConfigPath string `name:"config" short:"C" usage:"configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)" yaml:"-"`
 	PresetNames []string `name:"preset" short:"P" split:"true" sep:"," usage:"name of preset configuration to load from config file or built-in presets. Can be specified multiple times or comma-separated" yaml:"-"`
 	Version    bool   `name:"version" usage:"display version and exit" yaml:"-"`
+	MCP        bool   `name:"mcp" usage:"start MCP server on stdio" yaml:"-"`
 }
 
 func (c *Config) Init(args []string) error {
@@ -231,18 +232,16 @@ func (c Config) GetRightArgs() []string {
 }
 
 func (c *Config) setArgs(args []string) error {
-	if len(args) == 0 {
-		// Allow empty args if both sides are covered by snapshots.
-		if c.GetLeftSnapshot() == "" || c.GetRightSnapshot() == "" {
-			return fmt.Errorf("%w: no args", ErrConfig)
-		}
-		return nil
+	if len(args) > 0 {
+		before, after := slicex.Split(args, c.Delimiter)
+		c.CommonArgs = before
+		c.LeftArgs, c.RightArgs = slicex.Split(after, c.Delimiter)
 	}
-	before, after := slicex.Split(args, c.Delimiter)
-	c.CommonArgs = before
-	c.LeftArgs, c.RightArgs = slicex.Split(after, c.Delimiter)
 
-	// A side without args is only allowed when a snapshot replaces that side's command.
+	// Allow empty args if both sides are covered by snapshots.
+	if len(c.GetLeftArgs()) == 0 && c.GetLeftSnapshot() == "" && len(c.GetRightArgs()) == 0 && c.GetRightSnapshot() == "" {
+		return fmt.Errorf("%w: no args", ErrConfig)
+	}
 	if len(c.GetLeftArgs()) == 0 && c.GetLeftSnapshot() == "" {
 		return fmt.Errorf("%w: no left args", ErrConfig)
 	}

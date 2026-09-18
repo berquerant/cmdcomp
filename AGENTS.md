@@ -42,6 +42,9 @@ This document provides development instructions, project structure, architectura
 │   │   └── config.go        # Core runtime Config struct & environment variable expansion
 │   ├── execx/
 │   │   └── exec.go          # Command execution & piped command runner abstraction
+│   ├── mcp/
+│   │   ├── server.go        # MCP (Model Context Protocol) server implementation & tools
+│   │   └── server_test.go   # MCP server unit tests
 │   ├── run/
 │   │   ├── executor.go      # Executor interface (RunHook, RunGenCmd, RunPipeline, RunDiff)
 │   │   ├── real_executor.go # Real execution implementation
