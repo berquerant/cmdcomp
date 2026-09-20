@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/berquerant/cmdcomp/pkg/config"
+	"github.com/berquerant/structconfig"
 	"github.com/goccy/go-yaml"
 )
 
@@ -43,6 +44,62 @@ func (c *ConfigSet) merge(x *ConfigSet) *ConfigSet {
 		c.Default = x.Default
 	}
 	return c
+}
+
+// ConfigMerger applies defaults, presets, env configs, and CLI flags in precedence order.
+type ConfigMerger struct {
+	merger *structconfig.Merger[Config]
+	base   Config
+}
+
+func NewConfigMerger() *ConfigMerger {
+	return &ConfigMerger{
+		merger: structconfig.NewMerger[Config](),
+		base:   *newDefaultConfig(),
+	}
+}
+
+func (m *ConfigMerger) ApplyDefault(cs *ConfigSet, noDefault bool) error {
+	if noDefault || cs.Default == nil {
+		return nil
+	}
+	merged, err := m.merger.Merge(m.base, *cs.Default)
+	if err != nil {
+		return err
+	}
+	m.base = merged
+	return nil
+}
+
+func (m *ConfigMerger) ApplyPresets(cs *ConfigSet, presetNames []string) error {
+	for _, p := range presetNames {
+		x, ok := cs.Find(p)
+		if !ok {
+			return fmt.Errorf("preset not found %s", p)
+		}
+		merged, err := m.merger.Merge(m.base, *x)
+		if err != nil {
+			return err
+		}
+		m.base = merged
+	}
+	return nil
+}
+
+func (m *ConfigMerger) MergeLayers(envConfig, cliConfig Config) (*Config, error) {
+	baseAndEnv, err := m.merger.Merge(m.base, envConfig)
+	if err != nil {
+		return nil, err
+	}
+	merged, err := m.merger.Merge(baseAndEnv, cliConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &merged, nil
+}
+
+func (m *ConfigMerger) Base() Config {
+	return m.base
 }
 
 func LoadConfigSet(path string) (*ConfigSet, error) {
