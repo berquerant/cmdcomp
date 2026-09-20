@@ -32,8 +32,8 @@ This document provides development instructions, project structure, architectura
 │       └── main_test.go     # End-to-end (E2E) tests with built binary
 ├── pkg/
 │   ├── cli/
-│   │   ├── builtin.go       # Built-in config presets (helm, k8s, json, yml, etc.)
-│   │   ├── config.go        # Config loading & merging (preset, file, flags)
+│   │   ├── builtin.go       # Built-in config presets (json, yaml, objdiff, dyff, u, uc)
+│   │   ├── config.go        # Config loading & merging (preset, file, flags, ConfigMerger)
 │   │   ├── flag.go          # CLI flag parsing (pflag)
 │   │   ├── usage.go         # Help text & UsageBuilder
 │   │   ├── usage_test.go    # Golden tests for usage output
@@ -47,9 +47,9 @@ This document provides development instructions, project structure, architectura
 │   │   └── server_test.go   # MCP server unit tests
 │   ├── run/
 │   │   ├── executor.go      # Executor interface (RunHook, RunGenCmd, RunPipeline, RunDiff)
-│   │   ├── real_executor.go # Real execution implementation
-│   │   ├── dryrun_executor.go # Shell script generator implementation
-│   │   ├── main.go          # Lifecycle orchestrator (runner) & phase error sentinels
+│   │   ├── real_executor.go # Real execution implementation (RealExecutor)
+│   │   ├── dryrun_executor.go # Shell script generator implementation (DryRunExecutor)
+│   │   ├── main.go          # Lifecycle orchestrator (runner), phase error sentinels & ExitCode
 │   │   ├── main_test.go     # Integration / pipeline unit tests
 │   │   └── dryrun_test.go   # Dry-run script output tests
 │   └── slicex/
@@ -67,7 +67,7 @@ This document provides development instructions, project structure, architectura
 
 1. **`Executor` Interface Pattern**:
    - All external command execution **MUST** go through the `Executor` interface ([pkg/run/executor.go](pkg/run/executor.go)).
-   - `realExecutor` and `DryRunExecutor` implement the same interface. This ensures dry-run scripts and real executions never drift out of sync.
+   - `RealExecutor` and `DryRunExecutor` implement the same interface. This ensures dry-run scripts and real executions never drift out of sync.
 2. **Sentinel Errors & Phase Context**:
    - Execution errors are tagged with sentinel errors (`run.ErrDiff`, `run.ErrHook`, `run.ErrGenCmd`, `run.ErrPipeline`) and wrapped with the phase name (e.g. `run left`, `run right`, `run startup[0]`, `run preprocess:left pipeline`).
 3. **Configuration, Presets & Environment Variables**:
@@ -82,10 +82,11 @@ This document provides development instructions, project structure, architectura
      $$\text{Built-in defaults} \to \text{Config file default (unless --no-default)} \to \text{Presets (in order)} \to \text{Env vars (CMDCOMP\_*)} \to \text{CLI flags}$$
    - CLI flags are in kebab-case (`--show-cmd-log`, `--dry-run`, `--left-preprocess`, `--no-default`, etc.).
    - Slices for commands (`startup`, `interceptor`, `preprocess`, `cleanup`) use `sep:"\n"` for newline separation in env vars. Slices for env vars (`env`, `left-env`, `right-env`) and presets (`preset`) use `sep:","`.
-4. **Exit Code Conventions**:
-   - `0`: No diff detected, `--dry-run`, `--version`/`--help`, or diff detected with `--success`.
-   - `1`: Diff detected (diff command exited with 1).
-   - `2`: Process failure (command failure, hook failure, pipeline failure, timeout, flag/config errors). Always exits with `2` even if `--success` is specified.
+4. **Exit Code Conventions & `run.ExitCode`**:
+   - Process and tool exit codes are resolved uniformly via `run.ExitCode(err, success)`:
+     - `0`: No diff detected, `--dry-run`, `--version`/`--help`, or diff detected with `--success`.
+     - `1`: Diff detected (diff command exited with 1).
+     - `2`: Process failure (command failure, hook failure, pipeline failure, timeout, flag/config errors). Always exits with `2` even if `--success` is specified.
 
 ---
 
