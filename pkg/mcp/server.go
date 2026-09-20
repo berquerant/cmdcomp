@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -126,30 +125,13 @@ func (s *Server) handleDiff(ctx context.Context, req *sdk.CallToolRequest, in Di
 
 	execErr := run.Main(cfg)
 	out := DiffOutput{
-		Stdout: buf.String(),
+		Stdout:   buf.String(),
+		ExitCode: run.ExitCode(execErr, cfg.Success),
+		HasDiff:  errors.Is(execErr, run.ErrDiff),
 	}
-
-	if execErr != nil {
-		if errors.Is(execErr, run.ErrDiff) {
-			out.HasDiff = true
-			if exitErr, ok := errors.AsType[*exec.ExitError](execErr); ok {
-				if cfg.Success && exitErr.ExitCode() == 1 {
-					out.ExitCode = 0
-				} else {
-					out.ExitCode = exitErr.ExitCode()
-				}
-			} else {
-				out.ExitCode = 1
-			}
-		} else {
-			out.ExitCode = 2
-			out.Error = execErr.Error()
-		}
-	} else {
-		out.ExitCode = 0
-		out.HasDiff = false
+	if execErr != nil && !errors.Is(execErr, run.ErrDiff) {
+		out.Error = execErr.Error()
 	}
-
 	return nil, out, nil
 }
 
@@ -216,51 +198,50 @@ func (s *Server) buildConfig(in DiffInput, dryRun bool) (*config.Config, *bytes.
 		if !ok {
 			return nil, nil, fmt.Errorf("preset not found: %s", p)
 		}
-		if presetCfg.Diff != "" {
-			c.Diff = presetCfg.Diff
-		}
-		if presetCfg.Shell != "" {
-			c.Shell = presetCfg.Shell
-		}
-		if len(presetCfg.Preprocess) > 0 {
-			c.Preprocess = append(c.Preprocess, presetCfg.Preprocess...)
-		}
-		if len(presetCfg.LeftPreprocess) > 0 {
-			c.LeftPreprocess = append(c.LeftPreprocess, presetCfg.LeftPreprocess...)
-		}
-		if len(presetCfg.RightPreprocess) > 0 {
-			c.RightPreprocess = append(c.RightPreprocess, presetCfg.RightPreprocess...)
-		}
-		if len(presetCfg.Startup) > 0 {
-			c.Startup = append(c.Startup, presetCfg.Startup...)
-		}
-		if len(presetCfg.Interceptor) > 0 {
-			c.Interceptor = append(c.Interceptor, presetCfg.Interceptor...)
-		}
-		if len(presetCfg.Cleanup) > 0 {
-			c.Cleanup = append(c.Cleanup, presetCfg.Cleanup...)
-		}
-		if len(presetCfg.Env) > 0 {
-			c.Env = append(c.Env, presetCfg.Env...)
-		}
-		if len(presetCfg.LeftEnv) > 0 {
-			c.LeftEnv = append(c.LeftEnv, presetCfg.LeftEnv...)
-		}
-		if len(presetCfg.RightEnv) > 0 {
-			c.RightEnv = append(c.RightEnv, presetCfg.RightEnv...)
-		}
-		if len(presetCfg.CommonArgs) > 0 {
-			c.CommonArgs = append(c.CommonArgs, presetCfg.CommonArgs...)
-		}
-		if len(presetCfg.LeftArgs) > 0 {
-			c.LeftArgs = append(c.LeftArgs, presetCfg.LeftArgs...)
-		}
-		if len(presetCfg.RightArgs) > 0 {
-			c.RightArgs = append(c.RightArgs, presetCfg.RightArgs...)
+		mergePreset(c, presetCfg)
+	}
+
+	applyToolInputs(c, in)
+
+	var buf bytes.Buffer
+	c.Writer = &buf
+
+	if in.StdinContent != "" {
+		c.Reader = strings.NewReader(in.StdinContent)
+		if c.Stdin == "" && c.LeftStdin == "" && c.RightStdin == "" && c.Snapshot == "" && c.LeftSnapshot == "" && c.RightSnapshot == "" {
+			c.Stdin = "-"
 		}
 	}
 
-	// Apply tool inputs
+	if err := c.Init(nil); err != nil {
+		return nil, nil, err
+	}
+
+	return c, &buf, nil
+}
+
+func mergePreset(dst *config.Config, src *config.Config) {
+	if src.Diff != "" {
+		dst.Diff = src.Diff
+	}
+	if src.Shell != "" {
+		dst.Shell = src.Shell
+	}
+	dst.Preprocess = append(dst.Preprocess, src.Preprocess...)
+	dst.LeftPreprocess = append(dst.LeftPreprocess, src.LeftPreprocess...)
+	dst.RightPreprocess = append(dst.RightPreprocess, src.RightPreprocess...)
+	dst.Startup = append(dst.Startup, src.Startup...)
+	dst.Interceptor = append(dst.Interceptor, src.Interceptor...)
+	dst.Cleanup = append(dst.Cleanup, src.Cleanup...)
+	dst.Env = append(dst.Env, src.Env...)
+	dst.LeftEnv = append(dst.LeftEnv, src.LeftEnv...)
+	dst.RightEnv = append(dst.RightEnv, src.RightEnv...)
+	dst.CommonArgs = append(dst.CommonArgs, src.CommonArgs...)
+	dst.LeftArgs = append(dst.LeftArgs, src.LeftArgs...)
+	dst.RightArgs = append(dst.RightArgs, src.RightArgs...)
+}
+
+func applyToolInputs(c *config.Config, in DiffInput) {
 	if in.Diff != "" {
 		c.Diff = in.Diff
 	}
@@ -312,22 +293,6 @@ func (s *Server) buildConfig(in DiffInput, dryRun bool) (*config.Config, *bytes.
 	c.CommonArgs = append(c.CommonArgs, in.CommonArgs...)
 	c.LeftArgs = append(c.LeftArgs, in.LeftArgs...)
 	c.RightArgs = append(c.RightArgs, in.RightArgs...)
-
-	var buf bytes.Buffer
-	c.Writer = &buf
-
-	if in.StdinContent != "" {
-		c.Reader = strings.NewReader(in.StdinContent)
-		if c.Stdin == "" && c.LeftStdin == "" && c.RightStdin == "" && c.Snapshot == "" && c.LeftSnapshot == "" && c.RightSnapshot == "" {
-			c.Stdin = "-"
-		}
-	}
-
-	if err := c.Init(nil); err != nil {
-		return nil, nil, err
-	}
-
-	return c, &buf, nil
 }
 
 // Serve runs the MCP server on stdio.

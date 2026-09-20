@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -34,15 +33,14 @@ func main() {
 	}
 
 	if err := run.Main(c); err != nil {
-		if errors.Is(err, run.ErrDiff) {
-			if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-				if c.Success && exitErr.ExitCode() == 1 {
-					return
-				}
-				os.Exit(exitErr.ExitCode())
-			}
+		code := run.ExitCode(err, c.Success)
+		if code == 0 {
+			return
 		}
-		fail(err)
+		if code == 2 {
+			fail(err)
+		}
+		os.Exit(code)
 	}
 }
 

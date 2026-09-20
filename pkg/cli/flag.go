@@ -18,7 +18,7 @@ var (
 	ErrExit = errors.New("Exit")
 )
 
-func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
+func parseCLIFlags(args []string, stdout io.Writer) (*Config, []string, error) {
 	fs := pflag.NewFlagSet("main", pflag.ContinueOnError)
 	fs.SetOutput(stdout)
 	fs.Usage = func() {
@@ -31,30 +31,38 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 
 	sc := structconfig.New[Config]()
 	if err := sc.SetFlags(fs); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	before, after := slicex.Split(args, "--")
 	if len(before) > 0 {
 		err := fs.Parse(before)
 		if errors.Is(err, pflag.ErrHelp) {
-			return nil, ErrExit
+			return nil, nil, ErrExit
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	var cliConfig Config
 	if err := sc.FromFlags(&cliConfig, fs); err != nil {
+		return nil, nil, err
+	}
+	return &cliConfig, after, nil
+}
+
+func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
+	cliConfig, after, err := parseCLIFlags(args, stdout)
+	if err != nil {
 		return nil, err
 	}
-
 	if cliConfig.Version {
 		version.Write(stdout)
 		return nil, ErrExit
 	}
 
+	sc := structconfig.New[Config]()
 	var envConfig Config
 	if err := sc.FromEnv(&envConfig, structconfig.WithEnvPrefix("CMDCOMP_")); err != nil {
 		return nil, err
@@ -75,50 +83,27 @@ func ParseConfig(args []string, stdout, stderr io.Writer) (*Config, error) {
 		return nil, err
 	}
 
-	merger := structconfig.NewMerger[Config]()
-	baseConfig := newDefaultConfig()
-
-	noDefault := envConfig.NoDefault || cliConfig.NoDefault
-	if !noDefault && cs.Default != nil {
-		mergedDefault, err := merger.Merge(*baseConfig, *cs.Default)
-		if err != nil {
-			return nil, err
-		}
-		baseConfig = &mergedDefault
-		slog.Debug("use config default")
+	merger := NewConfigMerger()
+	if err := merger.ApplyDefault(cs, envConfig.NoDefault || cliConfig.NoDefault); err != nil {
+		return nil, err
 	}
-
-	for _, p := range presetNames {
-		x, ok := cs.Find(p)
-		if !ok {
-			return nil, fmt.Errorf("preset not found %s", p)
-		}
-		mergedPreset, err := merger.Merge(*baseConfig, *x)
-		if err != nil {
-			return nil, err
-		}
-		baseConfig = &mergedPreset
-		slog.Debug("use preset", slog.String("preset", p))
+	if err := merger.ApplyPresets(cs, presetNames); err != nil {
+		return nil, err
 	}
 
 	// Layered configuration merge order:
 	// Precedence: baseConfig (default or combined presets) < envConfig (CMDCOMP_*) < cliConfig (CLI flags)
-	baseAndEnv, err := merger.Merge(*baseConfig, envConfig)
+	c, err := merger.MergeLayers(envConfig, *cliConfig)
 	if err != nil {
 		return nil, err
 	}
-	merged, err := merger.Merge(baseAndEnv, cliConfig)
-	if err != nil {
-		return nil, err
-	}
-	c := &merged
 
 	if c.Reader == nil {
 		c.Reader = os.Stdin
 	}
 	c.Writer = stdout
 	c.SetupLogger(stderr)
-	slog.Debug("parse args", slog.Any("args", before))
+	slog.Debug("parse args", slog.Any("args", args))
 	if !c.MCP {
 		slog.Debug("init args", slog.Any("args", after))
 		if err := c.Init(after); err != nil {
