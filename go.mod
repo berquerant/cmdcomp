@@ -1,6 +1,6 @@
 module github.com/berquerant/cmdcomp
 
-go 1.27.1
+go 1.27.3
 
 tool github.com/google/go-licenses/v2
 
