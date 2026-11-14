@@ -448,19 +448,19 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
 ```
   -c, --cleanup stringArray            command(s) guaranteed to execute before cmdcomp exits, even on failure. Can be specified multiple times. In env vars, separate commands with newlines
   -C, --config string                  configuration file path (default search order: UserConfigDir/cmdcomp/config.yml, $HOME/.cmdcomp.yml, .cmdcomp.yml)
-      --debug                          enable debug log output
+      --debug[=true|false]             enable debug log output
       --delimiter string               delimiter token separating [COMMON_ARGS], [LEFT_ARGS], and [RIGHT_ARGS] (e.g. '===') (default "--")
   -x, --diff string                    diff command invoked as '<diff> LEFT_FILE RIGHT_FILE' (e.g. 'diff -u', 'colordiff', 'dyff', 'objdiff -c') (default "diff")
-  -n, --dry-run                        print generated bash script capturing the full execution pipeline without executing commands
+  -n, --dry-run[=true|false]           print generated bash script capturing the full execution pipeline without executing commands
   -e, --env stringArray                environment variables passed to all subcommands along with system environment (KEY=VALUE). Can be specified multiple times or comma-separated
   -i, --interceptor stringArray        command(s) executed sequentially after left command and before right command (e.g. git checkout). Can be specified multiple times. In env vars, separate commands with newlines
-  -l, --label                          pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
+  -l, --label[=true|false]             pass '--label LEFT_ARG' and '--label RIGHT_ARG' to the diff command (useful for diff/colordiff)
   -E, --left-env stringArray           environment variables passed only to left command and left preprocess (KEY=VALUE). Can be specified multiple times or comma-separated
   -L, --left-preprocess stringArray    additional filter pipeline command(s) applied only to left output after common preprocess. Multiple flags form a piped chain. In env vars, separate commands with newlines
   -T, --left-snapshot string           use input as left command output without executing the left command ('-' for stdin, '@filename' for file)
   -J, --left-stdin string              pass input to stdin of left command only ('-' for stdin, '@filename' for file)
-      --mcp                            start MCP server on stdio
-      --no-default                     disable loading the 'default' configuration from the config file
+      --mcp[=true|false]               start MCP server on stdio
+      --no-default[=true|false]        disable loading the 'default' configuration from the config file
   -p, --preprocess stringArray         filter pipeline command(s) applied to both left and right outputs before diffing. Reads stdin, writes stdout (e.g. jq, yq, sed). Multiple flags form a piped chain. In env vars, separate commands with newlines
   -P, --preset stringArray             name of preset configuration to load from config file or built-in presets. Can be specified multiple times or comma-separated
       --process-timeout duration       maximum timeout for each individual subcommand execution (e.g. '10s', '1m')
@@ -469,13 +469,13 @@ Precedence: Default/Preset < Environment Variables < Command-line Flags
   -U, --right-snapshot string          use input as right command output without executing the right command ('-' for stdin, '@filename' for file)
   -K, --right-stdin string             pass input to stdin of right command only ('-' for stdin, '@filename' for file)
       --shell string                   shell executable used to run subcommands (default "bash")
-      --show-cmd-log                   print stdout and stderr of executed subcommands to log output
+      --show-cmd-log[=true|false]      print stdout and stderr of executed subcommands to log output
   -S, --snapshot string                use input as both left and right command outputs without executing commands ('-' for stdin, '@filename' for file)
   -s, --startup stringArray            command(s) executed sequentially before running commands (e.g. repo updates). Can be specified multiple times. In env vars, separate commands with newlines
   -I, --stdin string                   pass input to stdin of both left and right commands ('-' for stdin, '@filename' for file)
-      --success                        exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2
+      --success[=true|false]           exit 0 when diffs are detected (exit status 1 from diff command). Failures (exit code 2) still return 2
       --timeout duration               maximum timeout for entire cmdcomp execution (e.g. '30s', '2m')
-      --version                        display version and exit
+      --version[=true|false]           display version and exit
       --work-dir string                working directory for temporary output files. When specified, temporary files are preserved after execution
 ```
 
