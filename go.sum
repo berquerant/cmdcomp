@@ -2,8 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/berquerant/execx v0.13.0 h1:+cA6zD+RHVL6rxOEoZHGRDxeDzXvFyeMH6aYNzm9JyE=
 github.com/berquerant/execx v0.13.0/go.mod h1:ZkfL9XgEV4x4hDz5yJTJOYevJySkPg76K3AggqiHJkg=
-github.com/berquerant/structconfig v0.12.0 h1:EYV5WuEgIM6UVyWuFSF5mBmWDnG7MCkCBMAw1p7CVog=
-github.com/berquerant/structconfig v0.12.0/go.mod h1:WM9dp576oeDpNmI9q8T04HeD1HudBZ+GrF0zDjOtZhs=
+github.com/berquerant/structconfig v0.13.0 h1:Ic2vQecRAFFRcOZRL8ks94jecJo9muALOPWzKE/+tPo=
+github.com/berquerant/structconfig v0.13.0/go.mod h1:Dte98VLekA9Zse93TFqrODXK0y6RmAJ9HFIx5UvATFk=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=

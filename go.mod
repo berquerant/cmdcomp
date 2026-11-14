@@ -1,12 +1,12 @@
 module github.com/berquerant/cmdcomp
 
-go 1.27.3
+go 1.27.4
 
 tool github.com/google/go-licenses/v2
 
 require (
 	github.com/berquerant/execx v0.13.0
-	github.com/berquerant/structconfig v0.12.0
+	github.com/berquerant/structconfig v0.13.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/spf13/pflag v1.0.10
