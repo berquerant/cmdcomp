@@ -623,8 +623,8 @@ SOFTWARE.
 ## github.com/spf13/pflag
 
 * Name: github.com/spf13/pflag
-* Version: v1.0.10
-* License: [BSD-3-Clause](https://github.com/spf13/pflag/blob/v1.0.10/LICENSE)
+* Version: v1.1.0
+* License: [BSD-3-Clause](https://github.com/spf13/pflag/blob/v1.1.0/LICENSE)
 
 ```
 Copyright (c) 2012 Alex Ogier. All rights reserved.
