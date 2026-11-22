@@ -10,64 +10,22 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
-    timeout-minutes: 5
+  ci:
     permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-      - name: Setup Go
-        uses: $/.github/actions/setup-go
-      - name: Lint
-        run: make lint
-
-  test:
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-      - name: Setup Go
-        uses: $/.github/actions/setup-go
-      - name: Test
-        run: make test
-
-  build:
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-      - name: Setup Go
-        uses: $/.github/actions/setup-go
-      - name: Build
-        run: make
-
-  govulncheck:
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-      - uses: berquerant/govulncheck-action@v1.0.3
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
+      contents: read # checkout repository for Go CI
+    uses: berquerant/reusable-workflows/.github/workflows/go-ci.yml@v0.4.0
+    with:
+      lint-command: make lint
+      test-command: make test
+      build-command: make
+      timeout-minutes: 5
 
   actions-lock-verify:
     permissions:
-      contents: read
-    uses: berquerant/reusable-workflows/.github/workflows/actions-lock-verify.yml@v0.1.0
+      contents: read # checkout repository and verify actions.lock
+    uses: berquerant/reusable-workflows/.github/workflows/actions-lock-verify.yml@v0.4.0
