@@ -3,10 +3,7 @@
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.3'
 workflows:
-    '.github/workflows/release.yml':
-        - 'actions/checkout@v7.0.1'
-        - 'actions/setup-go@v5.5.0'
-        - 'goreleaser/goreleaser-action@v7.3.0'
+    '.github/workflows/release.yml': []
     '.github/workflows/test.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/setup-go@v5.5.0'
@@ -40,8 +37,3 @@ dependencies:
         uses:
             - 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'
             - 'actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e'
-    'goreleaser/goreleaser-action@v7.3.0':
-        ref: 'v7.3.0'
-        commit: 'sha1-a4f02ab5355a589de60d917a659ce617ed19b3de'
-        owner_id: 24697112
-        repo_id: 209873006
