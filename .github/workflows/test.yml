@@ -18,7 +18,7 @@ jobs:
   ci:
     permissions:
       contents: read # checkout repository for Go CI
-    uses: berquerant/reusable-workflows/.github/workflows/go-ci.yml@v0.4.0
+    uses: berquerant/reusable-workflows/.github/workflows/go-ci.yml@v0.5.0
     with:
       lint-command: make lint
       test-command: make test
@@ -28,4 +28,4 @@ jobs:
   actions-lock-verify:
     permissions:
       contents: read # checkout repository and verify actions.lock
-    uses: berquerant/reusable-workflows/.github/workflows/actions-lock-verify.yml@v0.4.0
+    uses: berquerant/reusable-workflows/.github/workflows/actions-lock-verify.yml@v0.5.0
